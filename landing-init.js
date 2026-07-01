@@ -17,6 +17,8 @@
   function qa(s) { return document.querySelectorAll(s) }
 
   async function init() {
+    loadFromCache()
+
     supabase = window.supabase?.createClient
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
       : null
@@ -29,7 +31,41 @@
     }
 
     await Promise.all([loadSettings(), loadProducts()])
+    saveToCache()
     trackPageView()
+  }
+
+  function loadFromCache() {
+    try {
+      var cached = localStorage.getItem('growup_cache')
+      if (!cached) return
+      var data = JSON.parse(cached)
+      if (data.settings) {
+        settings = data.settings
+        if (data.settings.payment_accounts) updatePaymentDetails(data.settings.payment_accounts)
+      }
+      if (data.product) {
+        currentProduct = data.product
+        applyProductPrice(data.product.price)
+      }
+    } catch (e) { /* cache miss */ }
+  }
+
+  function saveToCache() {
+    try {
+      localStorage.setItem('growup_cache', JSON.stringify({
+        settings: settings,
+        product: currentProduct,
+        cachedAt: Date.now()
+      }))
+    } catch (e) { /* storage full */ }
+  }
+
+  function applyProductPrice(price) {
+    var formatted = new Intl.NumberFormat('ar-DZ').format(price)
+    qa('.price-tag, .fc-price, .final-price .amount, .order-summary .total span:last-child').forEach(function(el) {
+      el.textContent = formatted + ' دج'
+    })
   }
 
   async function loadSettings() {
@@ -58,20 +94,7 @@
 
     if (error || !data || !data[0]) return
     currentProduct = data[0]
-
-    const price = new Intl.NumberFormat('ar-DZ').format(data[0].price)
-    const priceEls = qa('.price-tag, .fc-price, .final-price .amount, .order-summary .total span:last-child')
-    priceEls.forEach(el => {
-      if (el.classList.contains('amount')) {
-        el.textContent = price + ' دج'
-      } else if (el.classList.contains('fc-price')) {
-        el.textContent = price + ' دج'
-      } else if (el.tagName === 'SPAN' && el.closest('.total')) {
-        el.textContent = price + ' دج'
-      } else {
-        el.textContent = price + ' دج'
-      }
-    })
+    applyProductPrice(data[0].price)
   }
 
   function updatePaymentDetails(paymentAccounts) {
