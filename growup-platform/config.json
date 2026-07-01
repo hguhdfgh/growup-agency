@@ -1,0 +1,18 @@
+{
+  "project": "GrowUp Agency",
+  "version": "1.0.0",
+  "currency": "DZD",
+  "currencySymbol": "دج",
+  "country": "DZ",
+  "defaultLocale": "ar",
+  "locales": ["ar", "fr"],
+  "supportedLocales": {
+    "ar": "العربية",
+    "fr": "Français"
+  },
+  "whatsappNumber": "+213XXXXXXXXX",
+  "notificationsEnabled": false,
+  "deliveryEmail": "تواصل معنا على واتساب",
+  "storageBucket": "payment-proofs",
+  "orderPrefix": "GRW"
+}
