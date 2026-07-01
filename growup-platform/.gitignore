@@ -1,0 +1,5 @@
+node_modules/
+*.js
+!supabase/functions/*/index.ts
+.DS_Store
+.env
