@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" x-data="dashboardApp()">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GrowUp Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --bg: #ffffff; --bg-secondary: #f5f5f7; --bg-sidebar: #1d1d1f;
+      --text: #1d1d1f; --text-secondary: #6e6e73; --text-sidebar: #f5f5f7;
+      --accent: #0071e3; --border: #d2d2d7;
+      --success: #34c759; --error: #ff3b30; --warning: #ff9500;
+      --radius: 12px; --radius-sm: 8px;
+      --sidebar-width: 240px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Cairo', 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+    .dashboard-layout { display: flex; height: 100vh; overflow: hidden; }
+    .sidebar {
+      width: var(--sidebar-width); background: var(--bg-sidebar); color: var(--text-sidebar);
+      flex-shrink: 0; overflow-y: auto; padding: 1.5rem 0;
+      display: flex; flex-direction: column;
+    }
+    .sidebar-brand { padding: 0 1.5rem 1.5rem; font-size: 1.25rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem; }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1.5rem; cursor: pointer; transition: background 0.15s;
+      font-size: 0.9rem; color: rgba(255,255,255,0.7);
+    }
+    .sidebar-item:hover, .sidebar-item.active { background: rgba(255,255,255,0.1); color: white; }
+    .sidebar-badge {
+      background: var(--error); color: white; border-radius: 100px;
+      padding: 0.1rem 0.4rem; font-size: 0.7rem; margin-inline-start: auto;
+    }
+    .sidebar-footer { margin-top: auto; padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); }
+    .main-content { flex: 1; overflow-y: auto; padding: 2rem; }
+    .login-screen { display: flex; align-items: center; justify-content: center; height: 100vh; background: var(--bg-secondary); }
+    .login-card { background: white; border-radius: var(--radius); padding: 3rem; width: 100%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: inherit; padding: 0.75rem 1rem; background: var(--bg-secondary); font-weight: 600; font-size: 0.875rem; color: var(--text-secondary); }
+    td { padding: 0.875rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:hover td { background: var(--bg-secondary); }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 100px; font-size: 0.75rem; font-weight: 600; }
+    .badge-yellow { background: #fff3cd; color: #856404; }
+    .badge-blue { background: #cce5ff; color: #004085; }
+    .badge-green { background: #d4edda; color: #155724; }
+    .badge-red { background: #f8d7da; color: #721c24; }
+    .badge-gray { background: var(--bg-secondary); color: var(--text-secondary); }
+    .input { width: 100%; padding: 0.625rem 1rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.9rem; background: var(--bg); color: var(--text); }
+    .input:focus { outline: none; border-color: var(--accent); }
+    select.input { cursor: pointer; width: auto; min-width: 140px; }
+    .label { display: block; font-weight: 600; margin-bottom: 0.4rem; font-size: 0.875rem; }
+    .btn { padding: 0.625rem 1.25rem; border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-danger { background: var(--error); color: white; }
+    .btn-danger:hover { opacity: 0.85; }
+    .btn-ghost { background: var(--bg-secondary); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--border); }
+    .btn-sm { padding: 0.4rem 0.75rem; font-size: 0.8rem; }
+    .card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+    .stat-card { text-align: center; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    .panel-title { font-size: 1.5rem; font-weight: 700; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-content { background: white; border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
+    .filter-bar { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+    .mt-1 { margin-top: 1rem; }
+    .mb-1 { margin-bottom: 1rem; }
+    .flex { display: flex; gap: 0.75rem; align-items: center; }
+    .flex-wrap { flex-wrap: wrap; }
+    .gap-2 { gap: 0.5rem; }
+    .text-sm { font-size: 0.875rem; }
+    .text-muted { color: var(--text-secondary); }
+    @media (max-width: 768px) {
+      .sidebar { width: 60px; }
+      .sidebar-brand, .sidebar-item span:not(.sidebar-badge) { display: none; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .main-content { padding: 1rem; }
+      .filter-bar { flex-direction: column; align-items: stretch; }
+    }
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body x-init="init()">
+
+  <!-- LOGIN SCREEN -->
+  <div class="login-screen" x-show="!session">
+    <div class="login-card">
+      <h1 style="margin-bottom: 0.5rem; font-size: 1.5rem; font-weight: 700;">GrowUp Dashboard</h1>
+      <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.875rem;">تسجيل دخول الفريق</p>
+      <div x-show="!loginLoading">
+        <div style="margin-bottom: 1rem;">
+          <label class="label">البريد الإلكتروني</label>
+          <input class="input" type="email" x-model="loginEmail" placeholder="your@email.com" @keydown.enter="login()">
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+          <label class="label">كلمة المرور</label>
+          <input class="input" type="password" x-model="loginPassword" placeholder="••••••••" @keydown.enter="login()">
+        </div>
+        <button class="btn btn-primary" @click="login()" style="width: 100%; justify-content: center;">دخول</button>
+        <p x-show="loginError" style="color: var(--error); margin-top: 1rem; font-size: 0.875rem;" x-text="loginError"></p>
+      </div>
+      <div x-show="loginLoading" style="text-align: center; padding: 2rem;"><p>جارٍ التحقق...</p></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD LAYOUT -->
+  <div class="dashboard-layout" x-show="session">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">GrowUp 🚀</div>
+      <div class="sidebar-item" :class="panel === 'orders' && 'active'" @click="panel = 'orders'">
+        📦 <span>الطلبات</span>
+        <span class="sidebar-badge" x-show="pendingOrdersCount > 0" x-text="pendingOrdersCount"></span>
+      </div>
+      <div class="sidebar-item" :class="panel === 'products' && 'active'" @click="panel = 'products'; if(!products.length)loadProducts()">🏪 <span>المنتجات</span></div>
+      <div class="sidebar-item" :class="panel === 'coupons' && 'active'" @click="panel = 'coupons'; if(!coupons.length)loadCoupons()">🎟️ <span>القسائم</span></div>
+      <div class="sidebar-item" :class="panel === 'analytics' && 'active'" @click="panel = 'analytics'; loadAnalytics()">📊 <span>التحليلات</span></div>
+      <div class="sidebar-item" :class="panel === 'settings' && 'active'" @click="panel = 'settings'">⚙️ <span>الإعدادات</span></div>
+      <div class="sidebar-item" x-show="staffRole === 'OWNER'" :class="panel === 'staff' && 'active'" @click="panel = 'staff'; loadStaff()">👥 <span>الفريق</span></div>
+      <div class="sidebar-item" x-show="staffRole === 'OWNER'" :class="panel === 'audit' && 'active'" @click="panel = 'audit'; loadAuditLog()">📋 <span>سجل العمليات</span></div>
+      <div class="sidebar-footer">
+        <p style="font-size: 0.75rem; opacity: 0.5; margin-bottom: 0.5rem;" x-text="staffEmail"></p>
+        <p style="font-size: 0.7rem; opacity: 0.4;" x-text="staffRole"></p>
+        <button @click="logout()" style="margin-top: 0.75rem; background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6); cursor: pointer; font-size: 0.8rem; padding: 0.4rem 0.75rem; border-radius: 6px;">خروج</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- ─── ORDERS ─── -->
+      <div x-show="panel === 'orders'">
+        <div class="panel-header">
+          <h2 class="panel-title">الطلبات</h2>
+          <div class="filter-bar">
+            <select class="input" x-model="ordersFilter" @change="loadOrders()">
+              <option value="">جميع الحالات</option>
+              <option value="PENDING_PAYMENT">في انتظار الدفع</option>
+              <option value="PROOF_SUBMITTED">تم رفع الإيصال</option>
+              <option value="VERIFYING">قيد التحقق</option>
+              <option value="APPROVED">موافق عليه</option>
+              <option value="DELIVERED">تم التسليم</option>
+              <option value="CANCELLED">ملغى</option>
+            </select>
+            <input class="input" placeholder="🔍 بحث..." x-model="ordersSearch" @input.debounce.500ms="loadOrders()" style="min-width: 180px;">
+          </div>
+        </div>
+        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius);">
+          <table>
+            <thead><tr><th>رقم الطلب</th><th>العميل</th><th>المنتج</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+            <tbody>
+              <template x-for="order in orders" :key="order.id">
+                <tr>
+                  <td><code style="font-size: 0.8rem; direction: ltr; display: inline-block;" x-text="order.order_number"></code></td>
+                  <td><p x-text="order.customer_email"></p><p style="font-size: 0.75rem; color: var(--text-secondary);" x-text="order.customer_whatsapp"></p></td>
+                  <td x-text="order.product_snapshot?.name_ar || '-'"></td>
+                  <td><span x-text="Number(order.final_price_dzd).toLocaleString('ar-DZ')"></span> دج</td>
+                  <td><span class="badge" :class="getStatusBadgeClass(order.status)" x-text="getStatusLabel(order.status)"></span></td>
+                  <td style="font-size: 0.85rem;" x-text="new Date(order.created_at).toLocaleDateString('ar-DZ')"></td>
+                  <td><button class="btn btn-ghost btn-sm" @click="openOrder(order)">فتح</button></td>
+                </tr>
+              </template>
+              <tr x-show="orders.length === 0"><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 3rem;">لا توجد طلبات</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── PRODUCTS ─── -->
+      <div x-show="panel === 'products'">
+        <div class="panel-header">
+          <h2 class="panel-title">المنتجات</h2>
+          <button class="btn btn-primary" @click="openProductModal()">+ منتج جديد</button>
+        </div>
+        <div style="display: grid; gap: 1rem;">
+          <template x-for="product in products" :key="product.id">
+            <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <p style="font-weight: 600;" x-text="product.name_ar"></p>
+                <p style="font-size: 0.875rem; color: var(--text-secondary);" x-text="product.name_fr"></p>
+                <p style="font-size: 1.25rem; font-weight: 700; margin-top: 0.25rem;"><span x-text="Number(product.price_dzd).toLocaleString('ar-DZ')"></span> دج</p>
+              </div>
+              <div class="flex">
+                <span class="badge" :class="product.status === 'active' ? 'badge-green' : 'badge-gray'" x-text="product.status === 'active' ? 'نشط' : 'معطّل'"></span>
+                <button class="btn btn-ghost btn-sm" @click="openProductModal(product)">تعديل</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ─── COUPONS ─── -->
+      <div x-show="panel === 'coupons'">
+        <div class="panel-header">
+          <h2 class="panel-title">القسائم والخصومات</h2>
+          <button class="btn btn-primary" @click="openCouponModal()">+ قسيمة جديدة</button>
+        </div>
+        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius);">
+          <table>
+            <thead><tr><th>الكود</th><th>النوع</th><th>القيمة</th><th>الاستخدامات</th><th>الانتهاء</th><th>الحالة</th><th>إجراء</th></tr></thead>
+            <tbody>
+              <template x-for="coupon in coupons" :key="coupon.id">
+                <tr>
+                  <td><code x-text="coupon.code"></code></td>
+                  <td x-text="coupon.type === 'PERCENT' ? 'نسبة %' : 'مبلغ ثابت'"></td>
+                  <td x-text="coupon.type === 'PERCENT' ? coupon.value + '%' : Number(coupon.value).toLocaleString('ar-DZ') + ' دج'"></td>
+                  <td x-text="(coupon.used_count || 0) + ' / ' + (coupon.max_uses || '∞')"></td>
+                  <td x-text="coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString('ar-DZ') : 'بلا انتهاء'"></td>
+                  <td><span class="badge" :class="coupon.active ? 'badge-green' : 'badge-gray'" x-text="coupon.active ? 'نشطة' : 'معطّلة'"></span></td>
+                  <td class="flex gap-2">
+                    <button class="btn btn-ghost btn-sm" @click="openCouponModal(coupon)">تعديل</button>
+                    <button class="btn btn-sm" :class="coupon.active ? 'btn-danger' : 'btn-primary'" @click="toggleCoupon(coupon)" x-text="coupon.active ? 'تعطيل' : 'تفعيل'"></button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── ANALYTICS ─── -->
+      <div x-show="panel === 'analytics'">
+        <div class="panel-header"><h2 class="panel-title">التحليلات</h2></div>
+        <div class="grid-4 mb-1">
+          <div class="card stat-card"><div class="stat-value" x-text="analytics.total_orders || 0"></div><div class="stat-label">إجمالي الطلبات</div></div>
+          <div class="card stat-card"><div class="stat-value" x-text="(analytics.total_revenue || 0).toLocaleString('ar-DZ') + ' دج'"></div><div class="stat-label">إجمالي الإيراد</div></div>
+          <div class="card stat-card"><div class="stat-value" x-text="(analytics.conversion_rate || 0) + '%'"></div><div class="stat-label">معدل التحويل</div></div>
+          <div class="card stat-card"><div class="stat-value" x-text="analytics.delivered_orders || 0"></div><div class="stat-label">طلبات مُسلَّمة</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><h3 style="margin-bottom: 1rem; font-size: 1rem;">الطلبات حسب الحالة</h3><canvas id="statusChart" height="200"></canvas></div>
+          <div class="card"><h3 style="margin-bottom: 1rem; font-size: 1rem;">الإيراد اليومي (30 يوم)</h3><canvas id="revenueChart" height="200"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ─── SETTINGS ─── -->
+      <div x-show="panel === 'settings'">
+        <div class="panel-header"><h2 class="panel-title">الإعدادات</h2></div>
+
+        <div class="card mb-1">
+          <h3 style="margin-bottom: 0.5rem;">طرق الدفع وأرقام الحسابات</h3>
+          <p style="color: var(--warning); background: #fff3cd; padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: 0.875rem;">⚠️ تأكد من إدخال الأرقام الحقيقية قبل الإطلاق — هذه المعلومات تظهر للعملاء عند الدفع</p>
+          <template x-for="method in settingsPaymentMethods" :key="method.id">
+            <div style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 0.75rem;">
+              <div class="flex" style="justify-content: space-between; margin-bottom: 0.75rem;">
+                <p style="font-weight: 600;" x-text="method.label_ar"></p>
+                <label class="flex" style="cursor: pointer;"><input type="checkbox" x-model="method.active" @change="updatePaymentMethod(method)"> <span class="text-sm">نشط</span></label>
+              </div>
+              <template x-for="(val, key) in (method.account_fields || {})" :key="key">
+                <div class="flex mb-1" style="align-items: center;">
+                  <span style="min-width: 120px; font-size: 0.875rem; color: var(--text-secondary);" x-text="key"></span>
+                  <input class="input" :value="val" @change="method.account_fields[key] = $event.target.value; updatePaymentMethod(method)" style="flex: 1;">
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+
+        <div class="card mb-1">
+          <h3 style="margin-bottom: 0.5rem;">النصوص القانونية والتواصل</h3>
+          <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">⚠️ تأكد من صحة أي ادعاء قانوني قبل نشره.</p>
+          <template x-for="sk in ['legal_company_name', 'legal_footer_text', 'whatsapp_number']" :key="sk">
+            <div class="mb-1">
+              <label class="label" x-text="sk"></label>
+              <div class="grid-2">
+                <input class="input" placeholder="عربي" x-model="settingsValues[sk + '_ar']">
+                <input class="input" placeholder="Français" x-model="settingsValues[sk + '_fr']">
+              </div>
+            </div>
+          </template>
+          <button class="btn btn-primary" @click="saveSettings()">حفظ الإعدادات</button>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom: 1rem;">خصائص تجريبية</h3>
+          <label class="flex" style="cursor: pointer;">
+            <input type="checkbox" x-model="notificationsEnabled" @change="toggleNotifications()">
+            <div><p style="font-weight: 600;">الإشعارات التلقائية (واتساب/بريد)</p><p style="font-size: 0.875rem; color: var(--text-secondary);">عند التفعيل: ستُرسل إشعارات تلقائية للعملاء.</p></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- ─── STAFF ─── -->
+      <div x-show="panel === 'staff' && staffRole === 'OWNER'">
+        <div class="panel-header">
+          <h2 class="panel-title">إدارة الفريق</h2>
+          <button class="btn btn-primary" @click="openStaffModal()">+ إضافة موظف</button>
+        </div>
+        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius);">
+          <table>
+            <thead><tr><th>البريد</th><th>الدور</th><th>الحالة</th><th>إجراء</th></tr></thead>
+            <tbody>
+              <template x-for="staff in staffList" :key="staff.id">
+                <tr>
+                  <td x-text="staff.email"></td>
+                  <td><span class="badge badge-blue" x-text="staff.role"></span></td>
+                  <td><span class="badge" :class="staff.active ? 'badge-green' : 'badge-gray'" x-text="staff.active ? 'نشط' : 'معطّل'"></span></td>
+                  <td>
+                    <button x-show="staff.id !== session?.user?.id" class="btn btn-sm" :class="staff.active ? 'btn-danger' : 'btn-primary'" @click="toggleStaff(staff)" x-text="staff.active ? 'تعطيل' : 'تفعيل'"></button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── AUDIT ─── -->
+      <div x-show="panel === 'audit' && staffRole === 'OWNER'">
+        <div class="panel-header"><h2 class="panel-title">سجل العمليات</h2></div>
+        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius);">
+          <table>
+            <thead><tr><th>الموظف</th><th>العملية</th><th>الجدول</th><th>التاريخ</th></tr></thead>
+            <tbody>
+              <template x-for="log in auditLogs" :key="log.id">
+                <tr>
+                  <td x-text="log.actor_email"></td>
+                  <td><code style="font-size: 0.8rem;" x-text="log.action"></code></td>
+                  <td x-text="log.target_table"></td>
+                  <td style="font-size: 0.85rem;" x-text="new Date(log.created_at).toLocaleString('ar-DZ')"></td>
+                </tr>
+              </template>
+              <tr x-show="auditLogs.length === 0"><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-secondary);">لا توجد عمليات مسجلة بعد</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ORDER DETAIL MODAL -->
+  <div class="modal-overlay" x-show="showOrderModal" @click.self="showOrderModal = false" x-cloak>
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="flex" style="justify-content: space-between; margin-bottom: 1.5rem;">
+        <h3 style="font-size: 1.25rem; font-weight: 700;">الطلب <span x-text="selectedOrder?.order_number"></span></h3>
+        <button @click="showOrderModal = false" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">✕</button>
+      </div>
+      <template x-if="selectedOrder">
+        <div>
+          <div class="grid-2 mb-1">
+            <div class="card">
+              <p class="label">العميل</p>
+              <p x-text="selectedOrder.customer_email"></p>
+              <p class="text-sm text-muted" x-text="selectedOrder.customer_phone"></p>
+              <a :href="'https://wa.me/' + (selectedOrder.customer_whatsapp || '').replace(/[^0-9]/g, '')" target="_blank" style="color: var(--accent); font-size: 0.875rem;" x-text="selectedOrder.customer_whatsapp || '—'"></a>
+            </div>
+            <div class="card">
+              <p class="label">المنتج والمبلغ</p>
+              <p x-text="selectedOrder.product_snapshot?.name_ar"></p>
+              <p style="font-weight: 700; font-size: 1.25rem;"><span x-text="Number(selectedOrder.final_price_dzd).toLocaleString('ar-DZ')"></span> دج</p>
+              <p x-show="selectedOrder.coupon_snapshot" style="color: var(--success); font-size: 0.875rem;">خصم: <span x-text="selectedOrder.coupon_snapshot?.code"></span> (-<span x-text="Number(selectedOrder.discount_dzd).toLocaleString('ar-DZ')"></span> دج)</p>
+            </div>
+          </div>
+
+          <!-- Payment proof -->
+          <div x-show="selectedOrder.payment_proofs?.length > 0" class="card mb-1">
+            <p class="label mb-1">إيصال الدفع</p>
+            <button class="btn btn-ghost btn-sm" @click="viewProof(selectedOrder.payment_proofs[0])">👁️ عرض الإيصال</button>
+            <div x-show="proofUrl" class="mt-1">
+              <a :href="proofUrl" target="_blank" style="color: var(--accent);" rel="noopener">🔗 فتح الإيصال في تبويب جديد (الرابط صالح 60 ثانية)</a>
+            </div>
+          </div>
+
+          <!-- Status change actions -->
+          <div x-show="['PROOF_SUBMITTED', 'VERIFYING'].includes(selectedOrder.status)" class="card mb-1" style="background: #f0f7ff; border-color: var(--accent);">
+            <p class="label mb-1">تغيير الحالة</p>
+            <textarea class="input" x-model="adminNote" placeholder="ملاحظة (مطلوبة للموافقة أو الإلغاء)" style="margin-bottom: 1rem; min-height: 80px;"></textarea>
+            <div class="flex">
+              <button class="btn btn-primary" @click="approveOrder()" :disabled="actionLoading" x-text="actionLoading ? 'جارٍ...' : '✅ موافقة وتسليم'"></button>
+              <button class="btn btn-danger" @click="cancelOrder()" :disabled="actionLoading">❌ إلغاء</button>
+            </div>
+          </div>
+
+          <!-- Status display -->
+          <div class="flex mt-1" style="padding-top: 1rem; border-top: 1px solid var(--border);">
+            <span class="badge" :class="getStatusBadgeClass(selectedOrder.status)" x-text="getStatusLabel(selectedOrder.status)"></span>
+            <p x-show="selectedOrder.admin_note" class="text-sm text-muted" style="margin-inline-start: 0.5rem;">ملاحظة: <span x-text="selectedOrder.admin_note"></span></p>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- PRODUCT MODAL -->
+  <div class="modal-overlay" x-show="showProductModal" @click.self="showProductModal = false" x-cloak>
+    <div class="modal-content">
+      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;" x-text="editingProduct?.id ? 'تعديل المنتج' : 'منتج جديد'"></h3>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div><label class="label">الاسم (عربي)</label><input class="input" x-model="editingProduct.name_ar"></div>
+        <div><label class="label">Nom (français)</label><input class="input" x-model="editingProduct.name_fr"></div>
+        <div><label class="label">السعر (دج)</label><input class="input" type="number" step="0.01" x-model="editingProduct.price_dzd"></div>
+        <div><label class="label">الوصف (عربي)</label><textarea class="input" x-model="editingProduct.description_ar" style="min-height: 60px;"></textarea></div>
+        <div><label class="label">Description (français)</label><textarea class="input" x-model="editingProduct.description_fr" style="min-height: 60px;"></textarea></div>
+        <div><label class="label">الرابط المختصر (slug)</label><input class="input" x-model="editingProduct.slug" placeholder="product-name"></div>
+        <div><label class="label">الحالة</label><select class="input" x-model="editingProduct.status"><option value="active">نشط</option><option value="inactive">معطّل</option><option value="draft">مسودة</option></select></div>
+        <div class="flex">
+          <button class="btn btn-primary" @click="saveProduct()" x-text="editingProduct?.id ? 'حفظ التعديلات' : 'إضافة المنتج'"></button>
+          <button class="btn btn-ghost" @click="showProductModal = false">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COUPON MODAL -->
+  <div class="modal-overlay" x-show="showCouponModal" @click.self="showCouponModal = false" x-cloak>
+    <div class="modal-content">
+      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;" x-text="editingCoupon?.id ? 'تعديل القسيمة' : 'قسيمة جديدة'"></h3>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div><label class="label">الكود</label><input class="input" x-model="editingCoupon.code" style="text-transform: uppercase; direction: ltr; text-align: left;"></div>
+        <div><label class="label">النوع</label><select class="input" x-model="editingCoupon.type"><option value="PERCENT">نسبة مئوية</option><option value="FIXED">مبلغ ثابت</option></select></div>
+        <div><label class="label" x-text="editingCoupon.type === 'PERCENT' ? 'القيمة (%)' : 'القيمة (دج)'"></label><input class="input" type="number" step="0.01" x-model="editingCoupon.value"></div>
+        <div><label class="label">الحد الأقصى (فارغ = غير محدود)</label><input class="input" type="number" x-model="editingCoupon.max_uses"></div>
+        <div><label class="label">تاريخ الانتهاء (اختياري)</label><input class="input" type="datetime-local" x-model="editingCoupon.expires_at"></div>
+        <label class="flex" style="cursor: pointer;"><input type="checkbox" x-model="editingCoupon.active"> <span>نشطة</span></label>
+        <div class="flex">
+          <button class="btn btn-primary" @click="saveCoupon()" x-text="editingCoupon?.id ? 'حفظ' : 'إضافة'"></button>
+          <button class="btn btn-ghost" @click="showCouponModal = false">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAFF MODAL -->
+  <div class="modal-overlay" x-show="showStaffModal" @click.self="showStaffModal = false" x-cloak>
+    <div class="modal-content">
+      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;">إضافة موظف</h3>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div><label class="label">البريد الإلكتروني</label><input class="input" type="email" x-model="newStaffEmail" placeholder="staff@email.com"></div>
+        <div><label class="label">الدور</label><select class="input" x-model="newStaffRole"><option value="SUPPORT">دعم</option><option value="ADMIN">مشرف</option></select></div>
+        <p class="text-sm text-muted">سيتم دعوة الموظف عبر Supabase Auth. تأكد من صحة البريد.</p>
+        <div class="flex">
+          <button class="btn btn-primary" @click="inviteStaff()" :disabled="staffInviteLoading" x-text="staffInviteLoading ? 'جارٍ...' : 'إرسال الدعوة'"></button>
+          <button class="btn btn-ghost" @click="showStaffModal = false">إلغاء</button>
+        </div>
+        <p x-show="staffInviteError" style="color: var(--error); font-size: 0.875rem;" x-text="staffInviteError"></p>
+        <p x-show="staffInviteSuccess" style="color: var(--success); font-size: 0.875rem;">تم إرسال الدعوة!</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://sfikedssplzkxpgejvgo.supabase.co'
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmaWtlZHNzcGx6a3hwZ2VqdmdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzY2MzQsImV4cCI6MjA5ODMxMjYzNH0.Z4JSVS8U_s2W5NhHGl9E8tcTCai8dxFyeMX6z95gEp4'
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+    function dashboardApp() {
+      return {
+        session: null,
+        staffRole: null,
+        staffEmail: null,
+        panel: 'orders',
+
+        loginEmail: '', loginPassword: '', loginLoading: false, loginError: '',
+
+        orders: [], ordersFilter: '', ordersSearch: '', pendingOrdersCount: 0,
+        showOrderModal: false, selectedOrder: null, adminNote: '', actionLoading: false, proofUrl: null,
+
+        products: [], showProductModal: false, editingProduct: { status: 'active', name_ar: '', name_fr: '', description_ar: '', description_fr: '', price_dzd: 0, slug: '' },
+
+        coupons: [], showCouponModal: false, editingCoupon: { code: '', type: 'PERCENT', value: 10, max_uses: null, expires_at: null, active: true },
+
+        staffList: [], showStaffModal: false, newStaffEmail: '', newStaffRole: 'SUPPORT', staffInviteLoading: false, staffInviteError: '', staffInviteSuccess: false,
+
+        analytics: {},
+
+        auditLogs: [],
+
+        settingsPaymentMethods: [], settingsValues: {}, notificationsEnabled: false,
+
+        async init() {
+          try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session) await this.onLogin(session)
+            supabase.auth.onAuthStateChange(async (_, s) => {
+              if (s) await this.onLogin(s); else { this.session = null; this.staffRole = null }
+            })
+          } catch (e) {
+            console.warn('Dashboard init error:', e)
+          }
+        },
+
+        async onLogin(session) {
+          this.session = session
+          const { data: staff, error } = await supabase
+            .from('staff_users')
+            .select('role, email')
+            .eq('id', session.user.id)
+            .eq('active', true)
+            .maybeSingle()
+          if (error || !staff) {
+            await supabase.auth.signOut()
+            this.session = null
+            this.loginError = 'ليس لديك صلاحية الوصول للداشبورد'
+            return
+          }
+          this.staffRole = staff.role
+          this.staffEmail = staff.email
+          await this.loadOrders()
+          await this.loadProducts()
+          await this.loadCoupons()
+          await this.loadSettingsData()
+        },
+
+        async login() {
+          this.loginLoading = true; this.loginError = ''
+          const { error } = await supabase.auth.signInWithPassword({ email: this.loginEmail, password: this.loginPassword })
+          if (error) { this.loginError = 'بريد أو كلمة مرور خاطئة' }
+          this.loginLoading = false
+        },
+
+        async logout() { await supabase.auth.signOut() },
+
+        // ── Orders ──
+        async loadOrders() {
+          let query = supabase
+            .from('orders')
+            .select('*, payment_proofs(id, storage_key, uploaded_at)')
+            .order('created_at', { ascending: false })
+            .limit(100)
+          if (this.ordersFilter) query = query.eq('status', this.ordersFilter)
+          if (this.ordersSearch) {
+            const s = this.ordersSearch
+            query = query.or(`order_number.ilike.%${s}%,customer_email.ilike.%${s}%`)
+          }
+          const { data } = await query
+          this.orders = data || []
+          this.pendingOrdersCount = this.orders.filter(o => o.status === 'PROOF_SUBMITTED').length
+        },
+
+        async openOrder(order) {
+          this.selectedOrder = order
+          this.adminNote = ''
+          this.proofUrl = null
+          this.showOrderModal = true
+        },
+
+        async viewProof(proof) {
+          this.proofUrl = null
+          const { data } = await supabase.storage.from('payment-proofs').createSignedUrl(proof.storage_key, 60)
+          if (data?.signedUrl) this.proofUrl = data.signedUrl
+          await supabase.from('audit_log').insert({
+            actor_id: this.session.user.id, actor_email: this.staffEmail,
+            action: 'VIEW_PROOF', target_table: 'payment_proofs', target_id: proof.id
+          })
+        },
+
+        async approveOrder() {
+          if (!this.adminNote) { alert('الملاحظة مطلوبة'); return }
+          this.actionLoading = true
+          try {
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/approve-order`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.session.access_token}` },
+              body: JSON.stringify({ order_id: this.selectedOrder.id, admin_note: this.adminNote })
+            })
+            const data = await res.json()
+            if (data.error) { alert('خطأ: ' + data.error) } else {
+              this.showOrderModal = false
+              await this.loadOrders()
+              alert('✅ تمت الموافقة وإرسال الحساب للعميل!')
+            }
+          } catch (e) { alert('حدث خطأ: ' + e.message) }
+          this.actionLoading = false
+        },
+
+        async cancelOrder() {
+          if (!this.adminNote) { alert('الملاحظة مطلوبة'); return }
+          this.actionLoading = true
+          await supabase.from('orders').update({ status: 'CANCELLED', admin_note: this.adminNote, updated_at: new Date().toISOString() }).eq('id', this.selectedOrder.id)
+          await supabase.from('audit_log').insert({
+            actor_id: this.session.user.id, actor_email: this.staffEmail,
+            action: 'CANCEL_ORDER', target_table: 'orders', target_id: this.selectedOrder.id,
+            after_data: { admin_note: this.adminNote }
+          })
+          this.actionLoading = false; this.showOrderModal = false; await this.loadOrders()
+        },
+
+        // ── Products ──
+        async loadProducts() {
+          const { data } = await supabase.from('products').select('*').order('sort_order')
+          this.products = data || []
+        },
+
+        openProductModal(product = null) {
+          if (product) {
+            this.editingProduct = { ...product }
+          } else {
+            this.editingProduct = { status: 'active', name_ar: '', name_fr: '', description_ar: '', description_fr: '', price_dzd: 0, slug: '' }
+          }
+          this.showProductModal = true
+        },
+
+        async saveProduct() {
+          const p = this.editingProduct
+          const id = p.id
+          const data = { name_ar: p.name_ar, name_fr: p.name_fr, description_ar: p.description_ar, description_fr: p.description_fr, price_dzd: Number(p.price_dzd), status: p.status, slug: p.slug || p.name_ar?.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() }
+          if (id) {
+            data.updated_at = new Date().toISOString()
+            await supabase.from('products').update(data).eq('id', id)
+          } else {
+            await supabase.from('products').insert(data)
+          }
+          await supabase.from('audit_log').insert({
+            actor_id: this.session.user.id, actor_email: this.staffEmail,
+            action: id ? 'UPDATE_PRODUCT' : 'CREATE_PRODUCT', target_table: 'products', target_id: id
+          })
+          this.showProductModal = false; await this.loadProducts()
+        },
+
+        // ── Coupons ──
+        async loadCoupons() {
+          const { data } = await supabase.from('coupons').select('*').order('created_at', { ascending: false })
+          this.coupons = data || []
+        },
+
+        openCouponModal(coupon = null) {
+          if (coupon) {
+            this.editingCoupon = { ...coupon, expires_at: coupon.expires_at ? new Date(coupon.expires_at).toISOString().slice(0, 16) : null }
+          } else {
+            this.editingCoupon = { code: '', type: 'PERCENT', value: 10, max_uses: null, expires_at: null, active: true }
+          }
+          this.showCouponModal = true
+        },
+
+        async saveCoupon() {
+          const c = this.editingCoupon
+          const id = c.id
+          const data = {
+            code: c.code.toUpperCase(),
+            type: c.type,
+            value: Number(c.value),
+            max_uses: c.max_uses ? Number(c.max_uses) : null,
+            expires_at: c.expires_at || null,
+            active: c.active
+          }
+          if (id) {
+            await supabase.from('coupons').update(data).eq('id', id)
+          } else {
+            await supabase.from('coupons').insert(data)
+          }
+          await supabase.from('audit_log').insert({
+            actor_id: this.session.user.id, actor_email: this.staffEmail,
+            action: id ? 'UPDATE_COUPON' : 'CREATE_COUPON', target_table: 'coupons', target_id: id
+          })
+          this.showCouponModal = false; await this.loadCoupons()
+        },
+
+        async toggleCoupon(coupon) {
+          await supabase.from('coupons').update({ active: !coupon.active }).eq('id', coupon.id)
+          await this.loadCoupons()
+        },
+
+        // ── Analytics ──
+        async loadAnalytics() {
+          const { data: orders } = await supabase.from('orders').select('status, final_price_dzd, created_at')
+          const { data: events } = await supabase.from('analytics_events').select('event_name, created_at').order('created_at', { ascending: false }).limit(500)
+
+          const delivered = (orders || []).filter(o => o.status === 'DELIVERED')
+          const total_revenue = delivered.reduce((sum, o) => sum + (Number(o.final_price_dzd) || 0), 0)
+          const pageViews = (events || []).filter(e => e.event_name === 'page_view').length
+
+          this.analytics = {
+            total_orders: (orders || []).length,
+            total_revenue,
+            delivered_orders: delivered.length,
+            conversion_rate: pageViews > 0 ? Math.round(delivered.length / pageViews * 100) : 0
+          }
+
+          setTimeout(() => {
+            const statusCounts = {}
+            ;(orders || []).forEach(o => { statusCounts[o.status] = (statusCounts[o.status] || 0) + 1 })
+            const statusCtx = document.getElementById('statusChart')
+            if (statusCtx) {
+              new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                  labels: Object.keys(statusCounts),
+                  datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#0071e3','#34c759','#ff9500','#ff3b30','#6e6e73','#5ac8fa'] }]
+                },
+                options: { plugins: { legend: { position: 'bottom' } } }
+              })
+            }
+
+            const last30 = Array.from({ length: 30 }, (_, i) => {
+              const d = new Date(); d.setDate(d.getDate() - 29 + i)
+              return d.toISOString().slice(0, 10)
+            })
+            const revenueByDay = {}
+            last30.forEach(d => revenueByDay[d] = 0)
+            delivered.forEach(o => {
+              const d = o.created_at.slice(0, 10)
+              if (revenueByDay[d] !== undefined) revenueByDay[d] += Number(o.final_price_dzd)
+            })
+            const revenueCtx = document.getElementById('revenueChart')
+            if (revenueCtx) {
+              new Chart(revenueCtx, {
+                type: 'line',
+                data: {
+                  labels: last30.map(d => d.slice(5)),
+                  datasets: [{ label: 'إيراد (دج)', data: Object.values(revenueByDay), fill: true, backgroundColor: 'rgba(0,113,227,0.1)', borderColor: '#0071e3', tension: 0.4 }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+              })
+            }
+          }, 200)
+        },
+
+        // ── Staff ──
+        async loadStaff() {
+          const { data } = await supabase.from('staff_users').select('*').order('created_at')
+          this.staffList = data || []
+        },
+
+        openStaffModal() {
+          this.showStaffModal = true; this.newStaffEmail = ''; this.newStaffRole = 'SUPPORT'; this.staffInviteError = ''; this.staffInviteSuccess = false
+        },
+
+        async inviteStaff() {
+          if (!this.newStaffEmail) { this.staffInviteError = 'أدخل البريد الإلكتروني'; return }
+          this.staffInviteLoading = true; this.staffInviteError = ''; this.staffInviteSuccess = false
+          const { data, error } = await supabase.auth.admin.inviteUserByEmail(this.newStaffEmail)
+          if (error) { this.staffInviteError = error.message; this.staffInviteLoading = false; return }
+          if (data?.user) {
+            await supabase.from('staff_users').insert({ id: data.user.id, email: this.newStaffEmail, role: this.newStaffRole })
+            await this.loadStaff()
+            this.staffInviteSuccess = true
+            setTimeout(() => { this.showStaffModal = false }, 2000)
+          }
+          this.staffInviteLoading = false
+        },
+
+        async toggleStaff(staff) {
+          await supabase.from('staff_users').update({ active: !staff.active }).eq('id', staff.id)
+          await supabase.from('audit_log').insert({
+            actor_id: this.session.user.id, actor_email: this.staffEmail,
+            action: staff.active ? 'DISABLE_STAFF' : 'ENABLE_STAFF', target_table: 'staff_users', target_id: staff.id
+          })
+          await this.loadStaff()
+        },
+
+        // ── Audit ──
+        async loadAuditLog() {
+          const { data } = await supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(100)
+          this.auditLogs = data || []
+        },
+
+        // ── Settings ──
+        async loadSettingsData() {
+          const { data: methods } = await supabase.from('payment_methods').select('*').order('sort_order')
+          this.settingsPaymentMethods = methods || []
+          const { data: settings } = await supabase.from('settings').select('*')
+          if (settings) {
+            settings.forEach(s => {
+              if (s.key !== 'faq_items') {
+                if (s.value_ar) this.settingsValues[s.key + '_ar'] = s.value_ar
+                if (s.value_fr) this.settingsValues[s.key + '_fr'] = s.value_fr
+              }
+            })
+            const noti = settings.find(s => s.key === 'notifications_enabled')
+            this.notificationsEnabled = noti?.value_ar === 'true'
+          }
+        },
+
+        async updatePaymentMethod(method) {
+          await supabase.from('payment_methods').update({ active: method.active, account_fields: method.account_fields }).eq('id', method.id)
+          await supabase.from('audit_log').insert({
+            actor_id: this.session.user.id, actor_email: this.staffEmail,
+            action: 'UPDATE_PAYMENT_METHOD', target_table: 'payment_methods', target_id: method.id
+          })
+        },
+
+        async saveSettings() {
+          const updates = []
+          Object.entries(this.settingsValues).forEach(([k, v]) => {
+            const key = k.replace(/_ar$|_fr$/, '')
+            const locale = k.endsWith('_ar') ? 'ar' : (k.endsWith('_fr') ? 'fr' : null)
+            if (locale) updates.push({ key, [locale === 'ar' ? 'value_ar' : 'value_fr']: v })
+          })
+          const merged = {}
+          updates.forEach(u => { merged[u.key] = { ...merged[u.key], key: u.key, ...u } })
+          const toInsert = Object.values(merged)
+          for (const row of toInsert) {
+            await supabase.from('settings').upsert(row, { onConflict: 'key' })
+          }
+          await supabase.from('audit_log').insert({
+            actor_id: this.session.user.id, actor_email: this.staffEmail,
+            action: 'UPDATE_SETTINGS', target_table: 'settings'
+          })
+          alert('تم حفظ الإعدادات!')
+        },
+
+        async toggleNotifications() {
+          await supabase.from('settings').upsert(
+            { key: 'notifications_enabled', value_ar: this.notificationsEnabled ? 'true' : 'false', value_fr: this.notificationsEnabled ? 'true' : 'false' },
+            { onConflict: 'key' }
+          )
+        },
+
+        // ── Status helpers ──
+        getStatusLabel(status) {
+          return {
+            'PENDING_PAYMENT': 'في انتظار الدفع',
+            'PROOF_SUBMITTED': 'تم رفع الإيصال',
+            'VERIFYING': 'قيد التحقق',
+            'APPROVED': 'موافق عليه',
+            'DELIVERED': 'تم التسليم',
+            'CANCELLED': 'ملغى',
+            'REFUNDED': 'مسترَد'
+          }[status] || status
+        },
+
+        getStatusBadgeClass(status) {
+          return {
+            'PENDING_PAYMENT': 'badge-gray',
+            'PROOF_SUBMITTED': 'badge-yellow',
+            'VERIFYING': 'badge-blue',
+            'APPROVED': 'badge-blue',
+            'DELIVERED': 'badge-green',
+            'CANCELLED': 'badge-red',
+            'REFUNDED': 'badge-gray'
+          }[status] || 'badge-gray'
+        }
+      }
+    }
+  </script>
+</body>
+</html>
