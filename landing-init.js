@@ -21,13 +21,14 @@
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
       : null
 
+    setupCheckoutHooks()
+
     if (!supabase) {
       console.warn('Supabase client not available — page will use static content')
       return
     }
 
     await Promise.all([loadSettings(), loadProducts()])
-    setupCheckoutHooks()
     trackPageView()
   }
 
