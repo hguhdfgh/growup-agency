@@ -121,8 +121,8 @@
     const email = ($('email')?.value || '').trim()
     const phone = ($('phone')?.value || '').trim()
 
-    if (!name || !email || !phone) {
-      alert('يرجى ملء جميع الحقول')
+    if (!name || !email) {
+      alert('يرجى ملء الاسم والبريد الإلكتروني')
       return
     }
 
