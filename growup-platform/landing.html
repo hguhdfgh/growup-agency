@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" x-data="landingApp()">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title x-text="t('site_title')">GrowUp Agency — حساب TikTok الاحترافي</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f5f5f7;
+      --text: #1d1d1f;
+      --text-secondary: #6e6e73;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --border: #d2d2d7;
+      --success: #34c759;
+      --error: #ff3b30;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+      --shadow-md: 0 8px 32px rgba(0,0,0,0.12);
+      --font-ar: 'Cairo', sans-serif;
+      --font-fr: 'Inter', sans-serif;
+      --transition: 0.2s ease;
+    }
+    [data-dark] {
+      --bg: #000000;
+      --bg-secondary: #1c1c1e;
+      --text: #f5f5f7;
+      --text-secondary: #a1a1a6;
+      --border: #38383a;
+    }
+    [lang="fr"] body, [lang="fr"] .input, [lang="fr"] button { font-family: var(--font-fr); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-ar); background: var(--bg); color: var(--text); line-height: 1.6; transition: background var(--transition), color var(--transition); }
+    .text-hero { font-size: clamp(2rem, 5vw, 4rem); font-weight: 700; line-height: 1.1; }
+    .text-h2 { font-size: clamp(1.5rem, 3vw, 2.5rem); font-weight: 600; }
+    .text-h3 { font-size: 1.25rem; font-weight: 600; }
+    .text-body { font-size: 1rem; color: var(--text-secondary); }
+    .text-price { font-size: 3rem; font-weight: 700; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+    .section { padding: 5rem 0; }
+    .btn-primary {
+      background: var(--accent); color: white; border: none; padding: 0.875rem 2rem;
+      border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .card { background: var(--bg-secondary); border-radius: var(--radius); padding: 2rem; border: 1px solid var(--border); }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+      z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal-content {
+      background: var(--bg); border-radius: var(--radius); padding: 2rem;
+      width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-md);
+    }
+    .input {
+      width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); background: var(--bg); color: var(--text);
+      font-size: 1rem; transition: border-color var(--transition);
+    }
+    .input:focus { outline: none; border-color: var(--accent); }
+    select.input { cursor: pointer; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body :lang="locale" :dir="locale === 'ar' ? 'rtl' : 'ltr'" :data-dark="darkMode || undefined">
+
+  <!-- NAVBAR -->
+  <nav style="position: sticky; top: 0; background: var(--bg); border-bottom: 1px solid var(--border); z-index: 50; backdrop-filter: blur(10px);">
+    <div class="container" style="display: flex; align-items: center; justify-content: space-between; padding-block: 1rem;">
+      <span style="font-size: 1.25rem; font-weight: 700;" x-text="t('brand_name')">GrowUp</span>
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <button @click="toggleLocale()" style="background: var(--bg-secondary); border: 1px solid var(--border); padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.875rem; color: var(--text);">
+          <span x-text="locale === 'ar' ? 'FR' : 'عر'"></span>
+        </button>
+        <button @click="darkMode = !darkMode" style="background: none; border: none; cursor: pointer; font-size: 1.25rem; color: var(--text);" x-text="darkMode ? '☀️' : '🌙'"></button>
+        <button @click="openTrack()" style="background: none; border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; color: var(--text); font-size: 0.875rem;" x-text="t('nav_track')">تتبع طلبي</button>
+        <button @click="openAuth()" x-show="!session" style="background: none; border: none; cursor: pointer; color: var(--accent); font-size: 0.875rem;" x-text="t('nav_login')">دخول</button>
+        <button @click="signOut()" x-show="session" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 0.875rem;" x-text="t('nav_logout')">خروج</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="section" style="text-align: center; padding-top: 6rem; padding-bottom: 6rem;">
+    <div class="container">
+      <p style="color: var(--accent); font-weight: 600; margin-bottom: 1rem;" x-text="t('hero_badge')">الأول في الجزائر</p>
+      <h1 class="text-hero" style="margin-bottom: 1.5rem;" x-text="t('hero_title')">احصل على حساب TikTok Agency الاحترافي</h1>
+      <p class="text-body" style="font-size: 1.25rem; max-width: 600px; margin: 0 auto 3rem;" x-text="t('hero_subtitle')">أسرع طريقة للإعلان على TikTok في الجزائر</p>
+      <div style="display: inline-block; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem 3rem; margin-bottom: 2rem;">
+        <p class="text-price"><span x-text="product ? product.price_dzd.toLocaleString('ar-DZ') : '...'"></span> <span x-text="t('currency')"></span></p>
+        <p class="text-body" x-text="t('price_one_time')">دفعة واحدة، تسليم فوري</p>
+      </div>
+      <div>
+        <button class="btn-primary" @click="startCheckout()" style="font-size: 1.125rem; padding: 1rem 3rem;" x-text="t('cta_buy')">اطلب الآن</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section" style="background: var(--bg-secondary);">
+    <div class="container">
+      <h2 class="text-h2" style="text-align: center; margin-bottom: 3rem;" x-text="t('how_title')">كيف يعمل</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
+        <template x-for="step in getSteps()" :key="step.num">
+          <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 1rem;" x-text="step.icon"></div>
+            <h3 class="text-h3" x-text="step.title"></h3>
+            <p class="text-body" style="margin-top: 0.5rem;" x-text="step.desc"></p>
+          </div>
+        </template>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENEFITS -->
+  <section class="section">
+    <div class="container">
+      <h2 class="text-h2" style="text-align: center; margin-bottom: 3rem;" x-text="t('benefits_title')">لماذا GrowUp</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <template x-for="benefit in getBenefits()" :key="benefit.title">
+          <div style="display: flex; gap: 1rem; align-items: flex-start; padding: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius);">
+            <span style="font-size: 1.5rem; flex-shrink: 0;" x-text="benefit.icon"></span>
+            <div>
+              <h3 class="text-h3" x-text="benefit.title"></h3>
+              <p class="text-body" style="margin-top: 0.25rem;" x-text="benefit.desc"></p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" style="background: var(--bg-secondary);">
+    <div class="container" style="max-width: 700px;">
+      <h2 class="text-h2" style="text-align: center; margin-bottom: 3rem;" x-text="t('faq_title')">الأسئلة الشائعة</h2>
+      <template x-if="faqItems.length === 0">
+        <p class="text-body" style="text-align: center; padding: 2rem;" x-text="t('faq_empty')">سيتم إضافة الأسئلة لاحقاً من لوحة التحكم</p>
+      </template>
+      <template x-for="(item, i) in faqItems" :key="i">
+        <div style="border-bottom: 1px solid var(--border); padding: 1.25rem 0;">
+          <button @click="item.open = !item.open" style="width: 100%; text-align: inherit; background: none; border: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 1rem; font-weight: 600; color: var(--text); padding: 0;">
+            <span x-text="item[locale + '_q']"></span>
+            <span x-text="item.open ? '−' : '+'"></span>
+          </button>
+          <p x-show="item.open" x-transition class="text-body" style="margin-top: 0.75rem; padding-top: 0.75rem;" x-text="item[locale + '_a']"></p>
+        </div>
+      </template>
+    </div>
+  </section>
+
+  <!-- SUPPORT -->
+  <section class="section" style="text-align: center;">
+    <div class="container">
+      <h2 class="text-h2" x-text="t('support_title')">لديك سؤال؟</h2>
+      <p class="text-body" style="margin: 1rem 0 2rem;" x-text="t('support_desc')">فريقنا متاح عبر واتساب</p>
+      <a :href="'https://wa.me/' + (settings.whatsapp_number || '+213XXXXXXXXX').replace(/[^0-9+]/g, '') + '?text=' + encodeURIComponent(t('whatsapp_prefill'))" class="btn-primary" style="text-decoration: none; display: inline-block;" target="_blank">💬 <span x-text="t('support_cta')">تواصل عبر واتساب</span></a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 2rem 0; text-align: center;">
+    <div class="container">
+      <p class="text-body" style="font-size: 0.875rem;">
+        <span x-text="settings.legal_company_name || 'GrowUp Agency'"></span> —
+        <span x-text="t('rights')"></span>
+      </p>
+    </div>
+  </footer>
+
+  <!-- AUTH MODAL -->
+  <div class="modal-overlay" x-show="showAuth" x-transition @click.self="showAuth = false" x-cloak>
+    <div class="modal-content">
+      <h2 class="text-h2" style="margin-bottom: 1.5rem;" x-text="t('auth_title')">ادخل بريدك</h2>
+      <template x-if="!authSent">
+        <div>
+          <input class="input" type="email" :placeholder="t('auth_email_placeholder')" x-model="authEmail" style="margin-bottom: 1rem;" @keydown.enter="sendMagicLink()">
+          <button class="btn-primary" @click="sendMagicLink()" :disabled="authLoading" style="width: 100%;" x-text="authLoading ? t('loading') : t('auth_send')"></button>
+          <p x-show="authError" style="color: var(--error); margin-top: 0.75rem; font-size: 0.875rem;" x-text="authError"></p>
+        </div>
+      </template>
+      <template x-if="authSent">
+        <div style="text-align: center; padding: 1rem;">
+          <p style="font-size: 3rem; margin-bottom: 1rem;">📬</p>
+          <p x-text="t('auth_sent_msg')">تحقق من بريدك الإلكتروني</p>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- CHECKOUT MODAL -->
+  <div class="modal-overlay" x-show="showCheckout" x-transition @click.self="closeCheckout()" x-cloak>
+    <div class="modal-content">
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
+        <template x-for="s in [1,2,3,4,5]" :key="s">
+          <div style="flex: 1; height: 4px; border-radius: 2px;" :style="checkoutStep >= s ? 'background: var(--accent)' : 'background: var(--border)'"></div>
+        </template>
+      </div>
+
+      <!-- STEP 1: Product + Coupon -->
+      <div x-show="checkoutStep === 1">
+        <h3 class="text-h3" style="margin-bottom: 1.5rem;" x-text="t('checkout_product_title')">تفاصيل الطلب</h3>
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <p style="font-weight: 600;" x-text="product ? product['name_' + locale] : ''"></p>
+          <p class="text-price" style="font-size: 2rem; margin-top: 0.5rem;"><span x-text="(orderSummary ? orderSummary.final_price_dzd : (product ? product.price_dzd : 0)).toLocaleString('ar-DZ')"></span> <span x-text="t('currency')"></span></p>
+          <p x-show="orderSummary && orderSummary.discount_dzd > 0" style="color: var(--success); font-size: 0.875rem;">
+            <span x-text="t('discount_applied') + ': -' + orderSummary.discount_dzd.toLocaleString('ar-DZ') + ' ' + t('currency')"></span>
+          </p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
+          <input class="input" :placeholder="t('coupon_placeholder')" x-model="couponCode" style="flex: 1;" @keydown.enter="applyCoupon()">
+          <button @click="applyCoupon()" class="btn-primary" x-text="t('coupon_apply')">تطبيق</button>
+        </div>
+        <p x-show="couponError" style="color: var(--error); font-size: 0.875rem; margin-bottom: 1rem;" x-text="couponError"></p>
+        <button class="btn-primary" @click="goToContactStep()" style="width: 100%;" x-text="t('next')">التالي</button>
+      </div>
+
+      <!-- STEP 2: Contact -->
+      <div x-show="checkoutStep === 2">
+        <h3 class="text-h3" style="margin-bottom: 1.5rem;" x-text="t('checkout_contact_title')">معلومات الاتصال</h3>
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+          <input class="input" type="email" :placeholder="t('field_email')" x-model="form.email">
+          <input class="input" type="tel" :placeholder="t('field_phone')" x-model="form.phone">
+          <input class="input" type="tel" :placeholder="t('field_whatsapp')" x-model="form.whatsapp">
+        </div>
+        <div style="display: flex; gap: 1rem;">
+          <button @click="checkoutStep = 1" style="flex: 1; padding: 0.875rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: none; cursor: pointer; color: var(--text);" x-text="t('back')">رجوع</button>
+          <button class="btn-primary" @click="goToPaymentStep()" style="flex: 2;" x-text="t('next')">التالي</button>
+        </div>
+        <p x-show="formError" style="color: var(--error); font-size: 0.875rem; margin-top: 0.75rem;" x-text="formError"></p>
+      </div>
+
+      <!-- STEP 3: Payment Method -->
+      <div x-show="checkoutStep === 3">
+        <h3 class="text-h3" style="margin-bottom: 1.5rem;" x-text="t('checkout_payment_title')">طريقة الدفع</h3>
+        <template x-for="method in paymentMethods" :key="method.id">
+          <div @click="selectPaymentMethod(method)" style="cursor: pointer; padding: 1rem; border: 2px solid; border-color: selectedPaymentMethod?.id === method.id ? 'var(--accent)' : 'var(--border)'; border-radius: var(--radius-sm); margin-bottom: 0.75rem; transition: border-color 0.15s;">
+            <p style="font-weight: 600;" x-text="method['label_' + locale]"></p>
+          </div>
+        </template>
+        <div x-show="selectedPaymentMethod" class="card" style="margin-top: 1rem; background: #f0f7ff; border-color: var(--accent);">
+          <p style="font-weight: 600; margin-bottom: 0.5rem;" x-text="t('payment_instructions')">تعليمات الدفع</p>
+          <p x-text="selectedPaymentMethod?.['instructions_' + locale]"></p>
+          <template x-for="(val, key) in (selectedPaymentMethod?.account_fields || {})" :key="key">
+            <p style="margin-top: 0.5rem; font-family: monospace; background: white; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem; word-break: break-all;">
+              <strong x-text="key + ': '"></strong><span x-text="val"></span>
+            </p>
+          </template>
+          <p style="margin-top: 1rem; font-weight: 700; font-size: 1.125rem;">
+            <span x-text="t('amount_to_pay') + ': '"></span>
+            <span style="color: var(--accent);"><span x-text="(orderSummary ? orderSummary.final_price_dzd : product?.price_dzd || 0).toLocaleString('ar-DZ')"></span> <span x-text="t('currency')"></span></span>
+          </p>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+          <button @click="checkoutStep = 2" style="flex: 1; padding: 0.875rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: none; cursor: pointer; color: var(--text);" x-text="t('back')">رجوع</button>
+          <button class="btn-primary" @click="placeOrder()" style="flex: 2;" :disabled="!selectedPaymentMethod || orderLoading" x-text="orderLoading ? t('loading') : t('place_order')">تأكيد الطلب</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Upload Proof -->
+      <div x-show="checkoutStep === 4">
+        <h3 class="text-h3" style="margin-bottom: 0.5rem;" x-text="t('upload_title')">ارفع إيصال الدفع</h3>
+        <p class="text-body" style="margin-bottom: 1.5rem;" x-text="t('upload_desc')">ارفع صورة واضحة لإيصال تحويل المبلغ</p>
+        <div class="card" style="border: 2px dashed var(--accent); text-align: center; padding: 2rem; margin-bottom: 1.5rem; cursor: pointer;" @click="$refs.fileInput.click()">
+          <p style="font-size: 2rem; margin-bottom: 0.5rem;">📄</p>
+          <p x-text="proofFile ? proofFile.name : t('upload_click')"></p>
+          <p class="text-body" style="font-size: 0.75rem; margin-top: 0.25rem;" x-text="t('upload_formats')">JPG, PNG, PDF — حد أقصى 5MB</p>
+          <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" accept="image/jpeg,image/png,image/webp,application/pdf" style="display: none;">
+        </div>
+        <button class="btn-primary" @click="uploadProof()" style="width: 100%;" :disabled="!proofFile || uploadLoading" x-text="uploadLoading ? t('uploading') : t('upload_submit')">إرسال الإيصال</button>
+        <p x-show="uploadError" style="color: var(--error); margin-top: 0.75rem; font-size: 0.875rem;" x-text="uploadError"></p>
+      </div>
+
+      <!-- STEP 5: Success -->
+      <div x-show="checkoutStep === 5" style="text-align: center; padding: 1rem;">
+        <p style="font-size: 4rem; margin-bottom: 1rem;">✅</p>
+        <h3 class="text-h3" x-text="t('success_title')">تم إرسال طلبك بنجاح!</h3>
+        <p class="text-body" style="margin: 1rem 0;" x-text="t('success_desc')">سيراجع فريقنا إيصالك ويرسل لك الحساب خلال 24 ساعة</p>
+        <div class="card" style="margin: 1.5rem 0;">
+          <p class="text-body" x-text="t('order_number_label')"></p>
+          <p style="font-weight: 700; font-size: 1.25rem; font-family: monospace;" x-text="createdOrder?.order_number"></p>
+        </div>
+        <button @click="closeCheckout()" class="btn-primary" x-text="t('close')">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRACK ORDER MODAL -->
+  <div class="modal-overlay" x-show="showTrack" x-transition @click.self="showTrack = false" x-cloak>
+    <div class="modal-content">
+      <h2 class="text-h2" style="margin-bottom: 1.5rem;" x-text="t('track_title')">تتبع طلبي</h2>
+      <div x-show="!trackedOrder">
+        <input class="input" :placeholder="t('track_order_number')" x-model="trackOrderNumber" style="margin-bottom: 0.75rem;">
+        <input class="input" type="email" :placeholder="t('track_email')" x-model="trackEmail" style="margin-bottom: 1rem;" @keydown.enter="trackOrder()">
+        <button class="btn-primary" @click="trackOrder()" style="width: 100%;" :disabled="trackLoading" x-text="trackLoading ? t('loading') : t('track_search')">بحث</button>
+        <p x-show="trackError" style="color: var(--error); margin-top: 0.75rem;" x-text="trackError"></p>
+      </div>
+      <div x-show="trackedOrder">
+        <div class="card" style="margin-bottom: 1rem;">
+          <p style="font-weight: 600;"><span x-text="t('order_number_label')"></span> <span x-text="trackedOrder?.order_number"></span></p>
+          <div style="margin-top: 0.5rem;">
+            <span class="badge" :class="getStatusBadgeClass(trackedOrder?.status)"><span x-text="getStatusLabel(trackedOrder?.status)"></span></span>
+          </div>
+          <p style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);" x-text="t('track_date') + ': ' + new Date(trackedOrder?.created_at).toLocaleDateString(locale === 'ar' ? 'ar-DZ' : 'fr-DZ')"></p>
+        </div>
+        <button @click="trackedOrder = null; trackError = ''" style="background: none; border: none; cursor: pointer; color: var(--accent);" x-text="t('track_another')">تتبع طلب آخر</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 100px; font-size: 0.75rem; font-weight: 600; }
+    .badge-gray { background: var(--bg-secondary); color: var(--text-secondary); }
+    .badge-yellow { background: #fff3cd; color: #856404; }
+    .badge-blue { background: #cce5ff; color: #004085; }
+    .badge-green { background: #d4edda; color: #155724; }
+    .badge-red { background: #f8d7da; color: #721c24; }
+  </style>
+
+  <script>
+    const SUPABASE_URL = 'https://sfikedssplzkxpgejvgo.supabase.co'
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmaWtlZHNzcGx6a3hwZ2VqdmdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzY2MzQsImV4cCI6MjA5ODMxMjYzNH0.Z4JSVS8U_s2W5NhHGl9E8tcTCai8dxFyeMX6z95gEp4'
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+    const translations = {
+      ar: {
+        site_title: 'GrowUp Agency — حساب TikTok الاحترافي',
+        brand_name: 'GrowUp',
+        currency: 'دج',
+        hero_badge: 'الأول في الجزائر',
+        hero_title: 'احصل على حساب TikTok Agency الاحترافي',
+        hero_subtitle: 'أسرع طريقة للإعلان على TikTok في الجزائر — حساب وكالة حقيقي مع دعم كامل',
+        price_one_time: 'دفعة واحدة، تسليم فوري',
+        cta_buy: 'اطلب الآن',
+        how_title: 'كيف يعمل',
+        benefits_title: 'لماذا GrowUp',
+        faq_title: 'الأسئلة الشائعة',
+        faq_empty: 'سيتم إضافة الأسئلة لاحقاً من لوحة التحكم',
+        support_title: 'لديك سؤال؟',
+        support_desc: 'فريقنا متاح عبر واتساب',
+        support_cta: 'تواصل عبر واتساب',
+        whatsapp_prefill: 'مرحباً، أريد الاستفسار عن حساب TikTok Agency',
+        rights: 'جميع الحقوق محفوظة',
+        nav_track: 'تتبع طلبي',
+        nav_login: 'دخول',
+        nav_logout: 'خروج',
+        auth_title: 'ادخل بريدك الإلكتروني',
+        auth_email_placeholder: 'بريدك الإلكتروني',
+        auth_send: 'أرسل رابط الدخول',
+        auth_sent_msg: 'تحقق من بريدك — أرسلنا لك رابط الدخول',
+        checkout_product_title: 'تفاصيل الطلب',
+        checkout_contact_title: 'معلومات الاتصال',
+        checkout_payment_title: 'طريقة الدفع',
+        coupon_placeholder: 'رمز الخصم (اختياري)',
+        coupon_apply: 'تطبيق',
+        discount_applied: 'تم تطبيق الخصم',
+        next: 'التالي',
+        back: 'رجوع',
+        place_order: 'تأكيد الطلب',
+        payment_instructions: 'تعليمات الدفع:',
+        amount_to_pay: 'المبلغ المطلوب',
+        field_email: 'البريد الإلكتروني *',
+        field_phone: 'رقم الهاتف',
+        field_whatsapp: 'رقم واتساب',
+        upload_title: 'ارفع إيصال الدفع',
+        upload_desc: 'ارفع صورة واضحة لإيصال تحويل المبلغ',
+        upload_click: 'انقر لاختيار الملف',
+        upload_formats: 'JPG, PNG, PDF — حد أقصى 5MB',
+        upload_submit: 'إرسال الإيصال',
+        uploading: 'جارٍ الرفع...',
+        success_title: 'تم إرسال طلبك بنجاح!',
+        success_desc: 'سيراجع فريقنا إيصالك ويرسل لك الحساب خلال 24 ساعة',
+        order_number_label: 'رقم الطلب:',
+        close: 'إغلاق',
+        track_title: 'تتبع طلبي',
+        track_order_number: 'رقم الطلب (مثال: GRW-2024-00001)',
+        track_email: 'البريد الإلكتروني المستخدم للطلب',
+        track_search: 'بحث',
+        track_another: 'تتبع طلب آخر',
+        status_label: 'الحالة',
+        track_date: 'تاريخ الطلب',
+        loading: 'جارٍ التحميل...',
+      },
+      fr: {
+        site_title: 'GrowUp Agency — Compte TikTok Professionnel',
+        brand_name: 'GrowUp',
+        currency: 'DZD',
+        hero_badge: 'N°1 en Algérie',
+        hero_title: 'Obtenez votre compte TikTok Agency professionnel',
+        hero_subtitle: 'La façon la plus rapide de faire de la publicité sur TikTok en Algérie — Un vrai compte d\'agence avec un support complet',
+        price_one_time: 'Paiement unique, livraison immédiate',
+        cta_buy: 'Commander maintenant',
+        how_title: 'Comment ça marche',
+        benefits_title: 'Pourquoi GrowUp',
+        faq_title: 'Questions fréquentes',
+        faq_empty: 'Les FAQ seront ajoutées depuis le panneau d\'administration',
+        support_title: 'Une question ?',
+        support_desc: 'Notre équipe est disponible sur WhatsApp',
+        support_cta: 'Contacter via WhatsApp',
+        whatsapp_prefill: 'Bonjour, je voudrais me renseigner sur le compte TikTok Agency',
+        rights: 'Tous droits réservés',
+        nav_track: 'Suivre ma commande',
+        nav_login: 'Connexion',
+        nav_logout: 'Déconnexion',
+        auth_title: 'Entrez votre email',
+        auth_email_placeholder: 'Votre adresse email',
+        auth_send: 'Envoyer le lien de connexion',
+        auth_sent_msg: 'Vérifiez votre email — nous vous avons envoyé un lien de connexion',
+        checkout_product_title: 'Détails de la commande',
+        checkout_contact_title: 'Informations de contact',
+        checkout_payment_title: 'Méthode de paiement',
+        coupon_placeholder: 'Code de réduction (optionnel)',
+        coupon_apply: 'Appliquer',
+        discount_applied: 'Réduction appliquée',
+        next: 'Suivant',
+        back: 'Retour',
+        place_order: 'Confirmer la commande',
+        payment_instructions: 'Instructions de paiement:',
+        amount_to_pay: 'Montant à payer',
+        field_email: 'Email *',
+        field_phone: 'Téléphone',
+        field_whatsapp: 'WhatsApp',
+        upload_title: 'Télécharger le reçu de paiement',
+        upload_desc: 'Téléchargez une photo claire de votre reçu de paiement',
+        upload_click: 'Cliquez pour choisir un fichier',
+        upload_formats: 'JPG, PNG, PDF — 5MB max',
+        upload_submit: 'Envoyer le reçu',
+        uploading: 'Téléchargement...',
+        success_title: 'Commande envoyée avec succès !',
+        success_desc: 'Notre équipe vérifiera votre reçu et vous enverra le compte dans les 24h',
+        order_number_label: 'Numéro de commande:',
+        close: 'Fermer',
+        track_title: 'Suivre ma commande',
+        track_order_number: 'Numéro de commande (ex: GRW-2024-00001)',
+        track_email: 'Email utilisé pour la commande',
+        track_search: 'Rechercher',
+        track_another: 'Suivre une autre commande',
+        status_label: 'Statut',
+        track_date: 'Date de commande',
+        loading: 'Chargement...',
+      }
+    }
+
+    function landingApp() {
+      return {
+        locale: localStorage.getItem('locale') || 'ar',
+        darkMode: localStorage.getItem('darkMode') === 'true',
+        session: null,
+        product: null,
+        paymentMethods: [],
+        settings: {},
+        faqItems: [],
+
+        showAuth: false,
+        authEmail: '',
+        authLoading: false,
+        authSent: false,
+        authError: '',
+
+        showCheckout: false,
+        checkoutStep: 1,
+        couponCode: '',
+        couponError: '',
+        orderSummary: null,
+        form: { email: '', phone: '', whatsapp: '' },
+        formError: '',
+        selectedPaymentMethod: null,
+        orderLoading: false,
+        createdOrder: null,
+        proofFile: null,
+        uploadLoading: false,
+        uploadError: '',
+
+        showTrack: false,
+        trackOrderNumber: '',
+        trackEmail: '',
+        trackLoading: false,
+        trackError: '',
+        trackedOrder: null,
+
+        async init() {
+          this.applyDirection()
+          try {
+            const { data: { session } } = await supabase.auth.getSession()
+            this.session = session
+            supabase.auth.onAuthStateChange((_, s) => { this.session = s })
+
+            const { data: products } = await supabase.from('products').select('*').eq('status', 'active').order('sort_order').limit(1)
+            if (products?.length) this.product = products[0]
+
+            const { data: methods } = await supabase.from('payment_methods').select('*').eq('active', true).order('sort_order')
+            if (methods) this.paymentMethods = methods
+
+            const { data: settingsRows } = await supabase.from('settings').select('*')
+            if (settingsRows) {
+              settingsRows.forEach(row => {
+                if (row.key === 'faq_items') {
+                  if (row.value_json) this.faqItems = row.value_json.map(f => ({ ...f, open: false }))
+                } else {
+                  this.settings[row.key] = row.value_ar || row.value_fr || row.value_json
+                }
+              })
+            }
+
+            this.trackEvent('page_view')
+          } catch (e) {
+            console.warn('Supabase init error (page works with defaults):', e)
+          }
+        },
+
+        applyDirection() {
+          document.documentElement.lang = this.locale
+          document.documentElement.dir = this.locale === 'ar' ? 'rtl' : 'ltr'
+        },
+
+        t(key) { return translations[this.locale]?.[key] || translations['ar']?.[key] || key },
+
+        toggleLocale() {
+          this.locale = this.locale === 'ar' ? 'fr' : 'ar'
+          localStorage.setItem('locale', this.locale)
+          this.applyDirection()
+        },
+
+        openAuth() { this.showAuth = true; this.authSent = false; this.authError = '' },
+
+        async sendMagicLink() {
+          if (!this.authEmail) { this.authError = translations[this.locale]?.auth_email_placeholder || 'أدخل بريدك'; return }
+          this.authLoading = true; this.authError = ''
+          const { error } = await supabase.auth.signInWithOtp({
+            email: this.authEmail,
+            options: { emailRedirectTo: window.location.origin }
+          })
+          this.authLoading = false
+          if (error) { this.authError = error.message } else { this.authSent = true }
+        },
+
+        async signOut() { await supabase.auth.signOut(); this.session = null },
+
+        startCheckout() {
+          if (this.session) this.form.email = this.session.user.email
+          this.showCheckout = true
+          this.checkoutStep = 1
+          this.orderSummary = null
+          this.couponCode = ''
+          this.couponError = ''
+          this.formError = ''
+          this.selectedPaymentMethod = null
+          this.trackEvent('checkout_start', { product_id: this.product?.id })
+        },
+
+        closeCheckout() {
+          this.showCheckout = false
+          this.checkoutStep = 1
+          this.orderSummary = null
+          this.couponCode = ''
+          this.proofFile = null
+          this.uploadError = ''
+          this.createdOrder = null
+        },
+
+        async applyCoupon() {
+          this.couponError = ''
+          if (!this.couponCode) return
+          try {
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-order`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+              body: JSON.stringify({ product_id: this.product.id, coupon_code: this.couponCode })
+            })
+            const data = await res.json()
+            if (data.error) { this.couponError = data.error } else { this.orderSummary = data }
+          } catch { this.couponError = 'حدث خطأ، حاول مجدداً' }
+        },
+
+        goToContactStep() {
+          this.checkoutStep = 2
+        },
+
+        goToPaymentStep() {
+          if (!this.form.email) { this.formError = translations[this.locale]?.field_email || 'البريد الإلكتروني مطلوب'; return }
+          this.formError = ''
+          this.checkoutStep = 3
+        },
+
+        selectPaymentMethod(method) {
+          this.selectedPaymentMethod = method
+        },
+
+        async placeOrder() {
+          if (!this.selectedPaymentMethod) return
+          this.orderLoading = true
+          try {
+            const session = (await supabase.auth.getSession()).data.session
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/create-order`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token || SUPABASE_ANON_KEY}`
+              },
+              body: JSON.stringify({
+                product_id: this.product.id,
+                coupon_code: this.couponCode || null,
+                customer_email: this.form.email,
+                customer_phone: this.form.phone,
+                customer_whatsapp: this.form.whatsapp,
+                payment_method_id: this.selectedPaymentMethod.id,
+                locale: this.locale
+              })
+            })
+            const data = await res.json()
+            if (data.error) { alert(data.error) } else {
+              this.createdOrder = data
+              this.checkoutStep = 4
+              this.trackEvent('order_created', { order_id: data.order_id, product_id: this.product.id })
+            }
+          } catch { alert('حدث خطأ، حاول مجدداً') }
+          this.orderLoading = false
+        },
+
+        handleFileSelect(e) {
+          const file = e.target.files[0]
+          if (!file) return
+          if (file.size > 5 * 1024 * 1024) { this.uploadError = 'حجم الملف يتجاوز 5MB'; return }
+          this.proofFile = file
+          this.uploadError = ''
+        },
+
+        async uploadProof() {
+          if (!this.proofFile || !this.createdOrder) return
+          this.uploadLoading = true; this.uploadError = ''
+          const ext = this.proofFile.name.split('.').pop()
+          const filePath = `proofs/${this.createdOrder.order_id}/${Date.now()}.${ext}`
+          const { error: uploadError } = await supabase.storage.from('payment-proofs').upload(filePath, this.proofFile)
+          if (uploadError) { this.uploadError = 'فشل رفع الملف، حاول مجدداً'; this.uploadLoading = false; return }
+          const { error: proofError } = await supabase.from('payment_proofs').insert({
+            order_id: this.createdOrder.order_id,
+            storage_key: filePath
+          })
+          if (proofError) { this.uploadError = 'حدث خطأ، حاول مجدداً'; this.uploadLoading = false; return }
+          await supabase.from('orders').update({ status: 'PROOF_SUBMITTED' }).eq('id', this.createdOrder.order_id)
+          this.trackEvent('proof_uploaded', { order_id: this.createdOrder.order_id })
+          this.uploadLoading = false
+          this.checkoutStep = 5
+        },
+
+        openTrack() { this.showTrack = true; this.trackedOrder = null; this.trackError = ''; this.trackOrderNumber = ''; this.trackEmail = '' },
+
+        async trackOrder() {
+          if (!this.trackOrderNumber || !this.trackEmail) { this.trackError = 'أدخل رقم الطلب والبريد الإلكتروني'; return }
+          this.trackLoading = true; this.trackError = ''
+          const { data, error } = await supabase
+            .from('orders')
+            .select('order_number, status, created_at, product_snapshot')
+            .eq('order_number', this.trackOrderNumber.toUpperCase())
+            .eq('customer_email', this.trackEmail.toLowerCase())
+            .maybeSingle()
+          this.trackLoading = false
+          if (error || !data) { this.trackError = 'لم يتم العثور على الطلب' } else { this.trackedOrder = data }
+        },
+
+        getSteps() {
+          return (this.locale === 'ar' ? [
+            { num: 1, icon: '🛒', title: 'اطلب المنتج', desc: 'اختر المنتج واملأ بياناتك' },
+            { num: 2, icon: '💳', title: 'ادفع وارفع الإيصال', desc: 'ادفع عبر BaridiMob أو CCP وارفع صورة الإيصال' },
+            { num: 3, icon: '✅', title: 'استلم الحساب', desc: 'نراجع إيصالك ونرسل لك الحساب فوراً على بريدك' }
+          ] : [
+            { num: 1, icon: '🛒', title: 'Commandez', desc: 'Choisissez le produit et remplissez vos informations' },
+            { num: 2, icon: '💳', title: 'Payez et téléchargez', desc: 'Payez via BaridiMob ou CCP et téléchargez votre reçu' },
+            { num: 3, icon: '✅', title: 'Recevez le compte', desc: 'Nous vérifions votre reçu et vous envoyons le compte immédiatement' }
+          ])
+        },
+
+        getBenefits() {
+          return (this.locale === 'ar' ? [
+            { icon: '⚡', title: 'تسليم خلال 24 ساعة', desc: 'فور تأكيد الدفع، الحساب يصلك على بريدك' },
+            { icon: '🔒', title: 'حساب حقيقي وآمن', desc: 'حسابات وكالة رسمية من TikTok، تعمل بكامل الصلاحيات' },
+            { icon: '🇩🇿', title: 'مصمم للجزائر', desc: 'دفع بـ BaridiMob وCCP، دعم بالعربية' },
+            { icon: '📞', title: 'دعم فوري', desc: 'فريق دعم متاح على واتساب لمساعدتك' }
+          ] : [
+            { icon: '⚡', title: 'Livraison en 24h', desc: 'Dès confirmation du paiement, le compte vous est envoyé' },
+            { icon: '🔒', title: 'Compte réel et sécurisé', desc: 'Comptes d\'agence officiels TikTok avec tous les droits' },
+            { icon: '🇩🇿', title: 'Conçu pour l\'Algérie', desc: 'Paiement par BaridiMob et CCP, support en français' },
+            { icon: '📞', title: 'Support instantané', desc: 'Équipe disponible sur WhatsApp pour vous aider' }
+          ])
+        },
+
+        getStatusLabel(status) {
+          const labels = {
+            ar: {
+              'PENDING_PAYMENT': 'في انتظار الدفع',
+              'PROOF_SUBMITTED': 'تم رفع الإيصال — قيد المراجعة',
+              'VERIFYING': 'جارٍ التحقق',
+              'APPROVED': 'تمت الموافقة',
+              'DELIVERED': 'تم التسليم ✅',
+              'CANCELLED': 'ملغى',
+              'REFUNDED': 'تم الاسترداد'
+            },
+            fr: {
+              'PENDING_PAYMENT': 'En attente de paiement',
+              'PROOF_SUBMITTED': 'Reçu téléchargé — en cours de vérification',
+              'VERIFYING': 'Vérification en cours',
+              'APPROVED': 'Approuvé',
+              'DELIVERED': 'Livré ✅',
+              'CANCELLED': 'Annulé',
+              'REFUNDED': 'Remboursé'
+            }
+          }
+          return labels[this.locale]?.[status] || status
+        },
+
+        getStatusBadgeClass(status) {
+          return {
+            'PENDING_PAYMENT': 'badge-gray',
+            'PROOF_SUBMITTED': 'badge-yellow',
+            'VERIFYING': 'badge-blue',
+            'APPROVED': 'badge-blue',
+            'DELIVERED': 'badge-green',
+            'CANCELLED': 'badge-red',
+            'REFUNDED': 'badge-gray'
+          }[status] || 'badge-gray'
+        },
+
+        trackEvent(eventName, props = {}) {
+          const sessionId = localStorage.getItem('_gsid') || (() => {
+            const id = Math.random().toString(36).slice(2)
+            localStorage.setItem('_gsid', id)
+            return id
+          })()
+          supabase.from('analytics_events').insert({
+            event_name: eventName,
+            session_id: sessionId,
+            locale: this.locale,
+            referrer: document.referrer || null,
+            properties: props,
+            product_id: props.product_id || null,
+            order_id: props.order_id || null
+          }).then(() => {})
+        }
+      }
+    }
+  </script>
+</body>
+</html>
