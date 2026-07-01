@@ -8,6 +8,8 @@
   let supabase = null
   let settings = null
   let currentProduct = null
+  const FALLBACK_PRODUCT_ID = '384d5f4a-530e-4147-93e1-f67c5748f194'
+  const FALLBACK_PRODUCT_PRICE = 5900
   let currentOrderData = {}
 
   function $(id) { return document.getElementById(id) }
@@ -86,7 +88,7 @@
   function setupCheckoutHooks() {
     const originalSubmit = window.submitOrder
     window.submitOrder = function () {
-      if (!supabase || !currentProduct) {
+      if (!supabase) {
         showStep(5)
         return
       }
@@ -170,16 +172,18 @@
       return
     }
 
-    // Insert order
+    const productId = currentProduct ? currentProduct.id : FALLBACK_PRODUCT_ID
+    const productPrice = currentProduct ? currentProduct.price : FALLBACK_PRODUCT_PRICE
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         customer_id: customer.id,
-        product_id: currentProduct.id,
+        product_id: productId,
         customer_name: name,
         email: email,
         phone: phone,
-        amount: currentProduct.price,
+        amount: productPrice,
         payment_method: paymentMethod,
         payment_proof_url: currentOrderData.payment_proof_url || null,
         status: 'pending'
@@ -196,7 +200,7 @@
     }
 
     // Track analytics event
-    trackEvent('order_submitted', { order_id: order.id, amount: currentProduct.price })
+    trackEvent('order_submitted', { order_id: order.id, amount: productPrice })
 
     showStep(5)
   }
