@@ -695,12 +695,14 @@ async function loadCustomers(){
 
 async function deleteCustomerAction(id){
   showConfirm('هل أنت متأكد من حذف هذا العميل؟ سيتم حذف جميع طلباته أيضاً.',async function(){
-    var base=supabaseUrl+'/rest/v1/',headers={'Authorization':'Bearer '+supabaseServiceKey,'apikey':supabaseServiceKey,'Content-Type':'application/json'}
-    var r=await fetch(base+'orders?customer_id=eq.'+id,{method:'DELETE',headers})
-    if(!r.ok){showToast('حدث خطأ أثناء حذف الطلبات','error');return}
-    r=await fetch(base+'customers?id=eq.'+id,{method:'DELETE',headers})
-    if(r.ok){showToast('تم حذف العميل وجميع طلباته','success');loadCustomers()}
-    else{showToast('حدث خطأ أثناء حذف العميل','error')}
+    try{
+      var base=supabaseUrl+'/rest/v1/',headers={'Authorization':'Bearer '+supabaseServiceKey,'apikey':supabaseServiceKey,'Content-Type':'application/json'}
+      var r=await fetch(base+'orders?customer_id=eq.'+id,{method:'DELETE',headers})
+      if(!r.ok){showToast('حدث خطأ أثناء حذف الطلبات','error');return}
+      r=await fetch(base+'customers?id=eq.'+id,{method:'DELETE',headers})
+      if(r.ok){showToast('تم حذف العميل وجميع طلباته','success');loadCustomers()}
+      else{showToast('حدث خطأ أثناء حذف العميل','error')}
+    }catch(e){showToast('فشل الاتصال: '+e.message,'error')}
   })
 }
 window.deleteCustomerAction=deleteCustomerAction;
