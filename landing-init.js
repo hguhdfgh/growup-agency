@@ -38,6 +38,10 @@
     sendCAPI(eventName, email || '', params)
   }
 
+  function getProductPrice() {
+    return currentProduct ? currentProduct.price : FALLBACK_PRODUCT_PRICE
+  }
+
   async function init() {
     loadFromCache()
 
@@ -48,7 +52,7 @@
     setupCheckoutHooks()
 
     if (!supabase) {
-      console.warn('Supabase client not available — page will use static content')
+      console.warn('Supabase client not available â€” page will use static content')
       return
     }
 
@@ -57,6 +61,7 @@
     trackPageView()
 
     wrapOpenCheckout()
+    wrapNextStep()
   }
 
   function wrapOpenCheckout() {
@@ -64,7 +69,19 @@
     if (typeof origOpen === 'function') {
       window.openCheckout = function () {
         origOpen()
-        trackPixel('Lead', { value: FALLBACK_PRODUCT_PRICE, currency: 'DZD' })
+        trackPixel('InitiateCheckout', { value: getProductPrice(), currency: 'DZD' })
+      }
+    }
+  }
+
+  function wrapNextStep() {
+    var origNext = window.nextStep
+    if (typeof origNext === 'function') {
+      window.nextStep = function () {
+        if (currentStep === 1) {
+          trackPixel('AddPaymentInfo', { value: getProductPrice(), currency: 'DZD' })
+        }
+        origNext()
       }
     }
   }
@@ -98,7 +115,7 @@
   function applyProductPrice(price) {
     var formatted = new Intl.NumberFormat('ar-DZ').format(price)
     qa('.price-tag, .fc-price, .final-price .amount, .order-summary .total span:last-child').forEach(function(el) {
-      el.textContent = formatted + ' دج'
+      el.textContent = formatted + ' Ø¯Ø¬'
     })
   }
 
@@ -128,6 +145,12 @@
     if (error || !data || !data[0]) return
     currentProduct = data[0]
     applyProductPrice(data[0].price)
+    trackPixel('ViewContent', {
+      id: data[0].id,
+      value: data[0].price,
+      currency: 'DZD',
+      content_name: data[0].name || 'TikTok Agency'
+    })
   }
 
   function updatePaymentDetails(paymentAccounts) {
@@ -182,7 +205,7 @@
     const phone = ($('phone')?.value || '').trim()
 
     if (!name || !email) {
-      alert('يرجى ملء الاسم والبريد الإلكتروني')
+      alert('ÙŠØ±Ø¬Ù‰ Ù…Ù„Ø¡ Ø§Ù„Ø§Ø³Ù… ÙˆØ§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ')
       return
     }
 
@@ -202,7 +225,7 @@
 
     if (custError || !customer?.id) {
       console.error('Customer error:', custError || 'No ID returned')
-      alert('حدث خطأ أثناء تسجيل بياناتك. حاول مرة أخرى.')
+      alert('Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ³Ø¬ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§ØªÙƒ. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.')
       return
     }
 
@@ -224,7 +247,7 @@
 
     if (orderError) {
       console.error('Order error:', orderError)
-      alert('حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.')
+      alert('Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.')
       return
     }
 
