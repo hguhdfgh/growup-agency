@@ -113,9 +113,8 @@
   }
 
   function applyProductPrice(price) {
-    var formatted = price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-    qa('.price-tag, .fc-price, .final-price .amount, .order-summary .total span:last-child').forEach(function(el) {
-      el.textContent = formatted + ' دج'
+    qa('.price-tag, .fc-price, .final-price .amount, .order-summary .total span:last-child, .price-stamp').forEach(function(el) {
+      el.textContent = price + ' DZD'
     })
   }
 
