@@ -98,11 +98,6 @@
       var cached = localStorage.getItem('growup_cache')
       if (!cached) return
       var data = JSON.parse(cached)
-      var AGE_LIMIT = 30 * 60 * 1000
-      if (!data.cachedAt || (Date.now() - data.cachedAt) > AGE_LIMIT) {
-        localStorage.removeItem('growup_cache')
-        return
-      }
       if (data.settings) {
         settings = data.settings
         if (data.settings.payment_accounts) updatePaymentDetails(data.settings.payment_accounts)
@@ -125,10 +120,7 @@
   }
 
   function applyProductPrice(price) {
-    qa('.fc-price, .final-price .amount, .order-summary .total span:last-child, .price-stamp').forEach(function(el) {
-      el.textContent = price + ' DZD'
-    })
-    qa('.price-tag').forEach(function(el) {
+    qa('.price-tag, .fc-price, .final-price .amount, .order-summary .total span:last-child, .price-stamp').forEach(function(el) {
       el.textContent = price + ' DZD'
     })
   }
