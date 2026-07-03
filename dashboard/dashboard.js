@@ -47,14 +47,11 @@ async function init(){
   bindGlobalEvents();
   bindNavEvents();
   bindLoginForm();
-  var loadingMsg=$('loading-message');
-  if(loadingMsg)loadingMsg.textContent='جاري التحقق من الجلسة...';
   var fallbackTimer=setTimeout(function(){showLogin()},10000);
   try{
     var ses=await getSession();
     clearTimeout(fallbackTimer);
     if(ses.data){
-      if(loadingMsg)loadingMsg.textContent='جاري تحميل بيانات المستخدم...';
       var u=await getCurrentUser();
       if(u.data){
         A.user=u.data;
@@ -100,13 +97,7 @@ function checkSessionExpiry() {
 }
 setInterval(checkSessionExpiry, 60000)
 
-function hideLoading(){
-  var lp=$('page-loading');
-  if(lp){lp.classList.remove('active');lp.style.display='none'}
-}
-
 function showLogin(){
-  hideLoading();
   $('page-login').classList.add('active');
   $('app-layout').style.display='none';
   A.user=null;
@@ -114,7 +105,6 @@ function showLogin(){
 }
 
 function showApp(){
-  hideLoading();
   $('page-login').classList.remove('active');
   $('app-layout').style.display='flex';
   if(A.user){
