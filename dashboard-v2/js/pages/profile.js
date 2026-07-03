@@ -25,7 +25,8 @@ async function loadProfile() {
         phone: $('profile-phone')?.value || ''
       }
       try {
-        await updateCustomer(user.id, data)
+        await supabase.from('profiles').update(data).eq('id', user.id)
+        AppState.user.full_name = data.full_name
         if ($('sidebar-user-name')) $('sidebar-user-name').textContent = data.full_name || data.email
         showToast(__('success_save'), 'success')
       } catch { showToast(__('error_general'), 'error') }
@@ -58,9 +59,11 @@ async function loadProfile() {
 async function uploadAvatar(file) {
   if (!file) return
   try {
-    const { path } = await uploadFile('avatars', file, `avatar_${AppState.user.id}_${Date.now()}.${file.name.split('.').pop()}`)
-    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-    await updateCustomer(AppState.user.id, { avatar_url: publicUrl })
+    const ext = file.name.split('.').pop()
+    const path = `avatar_${AppState.user.id}_${Date.now()}.${ext}`
+    const { path: savedPath } = await uploadFile('avatars', file, path)
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(savedPath)
+    await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', AppState.user.id)
     AppState.user.avatar_url = publicUrl
     loadProfile()
     showToast(__('success_save'), 'success')
