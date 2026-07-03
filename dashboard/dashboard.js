@@ -144,12 +144,13 @@ function bindLoginForm(){
     var email=$('login-email').value,password=$('login-password').value;
     var r=await signIn(email,password);
     btn.disabled=false;txt.style.display='inline';if(loader)loader.style.display='none';
-    if(r.error){
-      if(err){err.textContent=r.error.message||'البريد الإلكتروني أو كلمة المرور غير صحيحة';err.style.display='block'}
-    }else{
-      A.session=r.data.session;A.user=r.data.user;
-      showApp();loadSettings();navigateTo('page-dashboard');setupRealtime();
-    }
+if(r.error){
+	      if(err){err.textContent=r.error.message||'البريد الإلكتروني أو كلمة المرور غير صحيحة';err.style.display='block'}
+	    }else{
+	      // A.session=r.data.session;A.user=r.data.user;
+	      // Instead of manual setting, let restoreSession handle the full flow
+	      await restoreSession();
+	    }
   });
 }
 
