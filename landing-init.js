@@ -95,18 +95,24 @@
 
   function loadFromCache() {
     try {
-      var cached = localStorage.getItem('growup_cache')
-      if (!cached) return
-      var data = JSON.parse(cached)
-      if (data.settings) {
-        settings = data.settings
-        if (data.settings.payment_accounts) updatePaymentDetails(data.settings.payment_accounts)
+      var raw = localStorage.getItem('growup_cache')
+      if (!raw) return null
+      var cached = JSON.parse(raw)
+      var AGE_LIMIT = 30 * 60 * 1000 // 30 دقيقة
+      if (!cached.cachedAt || (Date.now() - cached.cachedAt) > AGE_LIMIT) {
+        localStorage.removeItem('growup_cache')
+        return null
       }
-      if (data.product) {
-        currentProduct = data.product
-        applyProductPrice(data.product.price)
+      if (cached.settings) {
+        settings = cached.settings
+        if (cached.settings.payment_accounts) updatePaymentDetails(cached.settings.payment_accounts)
       }
-    } catch (e) { }
+      if (cached.product) {
+        currentProduct = cached.product
+        applyProductPrice(cached.product.price)
+      }
+      return cached
+    } catch (e) { return null }
   }
 
   function saveToCache() {
@@ -120,8 +126,12 @@
   }
 
   function applyProductPrice(price) {
-    qa('.price-tag, .fc-price, .final-price .amount, .order-summary .total span:last-child, .price-stamp').forEach(function(el) {
-      el.textContent = price + ' DZD'
+    var formatted = price.toLocaleString()
+    qa('.fc-price, .final-price .amount, .order-summary .total span:last-child').forEach(function(el) {
+      el.textContent = formatted + ' دج'
+    })
+    qa('.price-tag').forEach(function(el) {
+      el.textContent = formatted + ' دج'
     })
   }
 
