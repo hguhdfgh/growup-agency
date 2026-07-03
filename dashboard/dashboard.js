@@ -69,7 +69,7 @@ async function restoreSession(){
   console.log('[Init] Restoring session...')
   try{
     var ses=await getSession();
-    if(ses.data){
+    if(ses.data && ses.data.session){
       console.log('[Init] Session found, fetching user...')
       var u=await getCurrentUser();
       if(u.data){
