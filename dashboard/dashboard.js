@@ -45,46 +45,42 @@ window.addEventListener('unhandledrejection',function(e){_capErr(e.reason?.messa
 async function init(){
   var hash=location.hash.replace('#','')||'dashboard';
   bindGlobalEvents();
-  var loadingMsg=$('loading-message');
-  if(loadingMsg)loadingMsg.textContent='جاري التحقق من الجلسة...';
-  var fallbackTimer=setTimeout(function(){
-    if($('page-loading')?.classList.contains('active')){
-      showLogin();
-      showToast('تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.','error');
-    }
-  },15000);
-  var ses=await getSession();
-  clearTimeout(fallbackTimer);
-  if(ses.data){
-    if(loadingMsg)loadingMsg.textContent='جاري تحميل بيانات المستخدم...';
-    var u=await getCurrentUser();
-    if(u.data){
-      A.user=u.data;
-      A.session=ses.data;
-      A.session.user=u.data;
-      showApp();
-      loadSettings();
-      navigateTo('page-'+hash);
-      setupRealtime();
-      loadDarkModePreference();
-      setupGlobalSearch();
-      setupKeyboardShortcuts();
-      startSessionRefresh();
-      onAuthChange(function(event,session){
-        if(event==='SIGNED_OUT'||(!session&&A.user)){
-          A.user=null;A.session=null;
-          showLogin();
-        }
-      });
-    }else{
-      await signOut();
-      showLogin();
-    }
-  }else{
-    showLogin();
-  }
   bindNavEvents();
   bindLoginForm();
+  var loadingMsg=$('loading-message');
+  if(loadingMsg)loadingMsg.textContent='جاري التحقق من الجلسة...';
+  var fallbackTimer=setTimeout(function(){showLogin()},10000);
+  try{
+    var ses=await getSession();
+    clearTimeout(fallbackTimer);
+    if(ses.data){
+      if(loadingMsg)loadingMsg.textContent='جاري تحميل بيانات المستخدم...';
+      var u=await getCurrentUser();
+      if(u.data){
+        A.user=u.data;
+        A.session=ses.data;
+        A.session.user=u.data;
+        showApp();
+        loadSettings();
+        navigateTo('page-'+hash);
+        setupRealtime();
+        loadDarkModePreference();
+        setupGlobalSearch();
+        setupKeyboardShortcuts();
+        startSessionRefresh();
+        onAuthChange(function(event,session){
+          if(event==='SIGNED_OUT'||(!session&&A.user)){
+            A.user=null;A.session=null;
+            showLogin();
+          }
+        });
+        return;
+      }
+      await signOut();
+    }
+  }catch(e){}
+  clearTimeout(fallbackTimer);
+  showLogin();
 }
 
 // Session expiry warning
