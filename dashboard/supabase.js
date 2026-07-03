@@ -146,6 +146,14 @@ function onAuthChange(callback) {
   })
 }
 
+function initAuthListener(callback) {
+  if (window._authUnsub) { try { window._authUnsub() } catch(e) {} window._authUnsub = null }
+  if (!supabase || !callback) return
+  window._authUnsub = supabase.auth.onAuthStateChange(function(event, session) {
+    callback(event, session)
+  })
+}
+
 var getProfiles = async function () {
   try {
     var { data, error } = await supabase
