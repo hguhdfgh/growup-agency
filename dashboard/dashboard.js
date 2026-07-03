@@ -108,7 +108,7 @@ function checkSessionExpiry() {
       const expiresAt = data.session.expires_at * 1000
       const timeLeft = expiresAt - Date.now()
       if (timeLeft > 0 && timeLeft < 300000) {
-        showNotification('Your session will expire in ' + Math.ceil(timeLeft/60000) + ' minutes', 'warning')
+        showNotification('ستنتهي جلستك خلال ' + Math.ceil(timeLeft/60000) + ' دقائق', 'warning')
       }
     }
   })
