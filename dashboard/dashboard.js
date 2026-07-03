@@ -43,40 +43,58 @@ window.addEventListener('unhandledrejection',function(e){_capErr(e.reason?.messa
 
 // ── Init ──
 async function init(){
-  var hash=location.hash.replace('#','')||'dashboard';
+  console.log('[Init] Application starting...')
   bindGlobalEvents();
   bindNavEvents();
   bindLoginForm();
-  var fallbackTimer=setTimeout(function(){showLogin()},10000);
+  // Register auth listener first — handles SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED
+  initAuthListener(function(event, session){
+    console.log('[Init] Auth state changed:', event, !!session)
+    if(event==='SIGNED_IN' && session){
+      // Auto-navigate on sign in from another tab
+      if($('page-login')?.classList.contains('active')){
+        restoreSession()
+      }
+    } else if(event==='SIGNED_OUT' || (!session && A.user)){
+      A.user=null; A.session=null;
+      showLogin();
+    } else if(event==='TOKEN_REFRESHED'){
+      console.log('[Init] Token refreshed')
+    }
+  });
+  await restoreSession();
+}
+
+async function restoreSession(){
+  console.log('[Init] Restoring session...')
   try{
     var ses=await getSession();
-    clearTimeout(fallbackTimer);
     if(ses.data){
+      console.log('[Init] Session found, fetching user...')
       var u=await getCurrentUser();
       if(u.data){
         A.user=u.data;
         A.session=ses.data;
         A.session.user=u.data;
+        console.log('[Init] Dashboard loaded for:', u.data.email)
         showApp();
         loadSettings();
-        navigateTo('page-'+hash);
+        navigateTo('page-'+(location.hash.replace('#','')||'dashboard'));
         setupRealtime();
         loadDarkModePreference();
         setupGlobalSearch();
         setupKeyboardShortcuts();
         startSessionRefresh();
-        onAuthChange(function(event,session){
-          if(event==='SIGNED_OUT'||(!session&&A.user)){
-            A.user=null;A.session=null;
-            showLogin();
-          }
-        });
         return;
       }
+      console.log('[Init] Session invalid, signing out...')
       await signOut();
+    } else {
+      console.log('[Init] No session, showing login')
     }
-  }catch(e){}
-  clearTimeout(fallbackTimer);
+  }catch(e){
+    console.error('[Init] Session restore error:', e)
+  }
   showLogin();
 }
 
