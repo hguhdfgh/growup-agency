@@ -331,6 +331,10 @@ async function refreshDashboardStats(){
       var tRev=calcTrend(s.data.revenue_total||0,ys.data.revenue_total||0);var el=$('trend-revenue');if(el){el.textContent=tRev.percent+'%';el.className='stat-trend trend-'+tRev.direction}
     }
   }catch(e){}
+  try{
+    var abR=await supabase.from('abandoned_orders').select('*',{count:'exact',head:true});
+    if($('stat-abandoned'))$('stat-abandoned').textContent=abR.count||0;
+  }catch(e){}
 }
 window.refreshDashboardStats=refreshDashboardStats;
 
@@ -2079,9 +2083,28 @@ function setupRealtime(){
     try{
       var abSub=supabase.channel('abandoned-realtime').on('postgres_changes',{event:'*',schema:'public',table:'abandoned_orders'},function(){if(A.currentPage==='page-abandoned')loadAbandoned()}).subscribe();
       trackSubscription(abSub);
-    }catch(e){}
   }catch(e){}
+  try{
+    var abR=await supabase.from('abandoned_orders').select('*').order('updated_at',{ascending:false}).limit(5);
+    hideLoader('recent-abandoned-loader');
+    var abTbody=$('recent-abandoned-table');
+    if(!abTbody)return;
+    if(!abR.data||abR.data.length===0){showEmpty('recent-abandoned-empty');return}
+    hideEmpty('recent-abandoned-empty');
+    var statusLabels={new:'جديد',contacted:'تم الاتصال',waiting:'قيد الانتظار',recovered:'مسترد',lost:'ضائع'};
+    var statusColors={new:'badge-pending',contacted:'badge-open',waiting:'badge-archived',recovered:'badge-approved',lost:'badge-rejected'};
+    abTbody.innerHTML=abR.data.map(function(a){
+      return '<tr onclick="navigateTo(\'page-abandoned\')" style="cursor:pointer">'+
+        '<td class="cell-primary">'+sanitizeHTML(a.customer_name||'—')+'</td>'+
+        '<td dir="ltr" class="text-right">'+sanitizeHTML(a.phone||'—')+'</td>'+
+        '<td>'+sanitizeHTML(a.product_name||'—')+'</td>'+
+        '<td><span class="badge '+(statusColors[a.status]||'badge-archived')+'">'+(statusLabels[a.status]||a.status)+'</span></td>'+
+        '<td>'+(a.completion_pct||0)+'%</td>'+
+        '<td>'+fmtDate(a.updated_at)+'</td></tr>'
+    }).join('');
+  }catch(e){hideLoader('recent-abandoned-loader')}
 }
+
 
 // ── Dark Mode ──
 function toggleDarkMode(){

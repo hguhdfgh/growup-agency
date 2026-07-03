@@ -247,6 +247,13 @@
               </div>
               <span class="stat-trend trend-up" id="trend-revenue">+0%</span>
             </div>
+            <div class="stat-card" data-stat="abandoned" onclick="navigateTo('page-abandoned')" style="cursor:pointer">
+              <div class="stat-icon stat-icon-warning"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+              <div class="stat-content">
+                <span class="stat-value" id="stat-abandoned">0</span>
+                <span class="stat-label">الطلبات المتروكة</span>
+              </div>
+            </div>
           </div>
           <div class="dashboard-cards">
             <div class="card">
@@ -280,6 +287,31 @@
                 <button class="btn btn-sm btn-ghost" data-page="page-products">عرض الكل</button>
               </div>
               <div class="card-body" id="top-products-list"></div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h3>آخر الطلبات المتروكة</h3>
+                <button class="btn btn-sm btn-ghost" data-page="page-abandoned">عرض الكل</button>
+              </div>
+              <div class="card-body table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>العميل</th>
+                      <th>الهاتف</th>
+                      <th>المنتج</th>
+                      <th>الحالة</th>
+                      <th>الإكمال</th>
+                      <th>التاريخ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recent-abandoned-table"></tbody>
+                </table>
+                <div class="loading-spinner" id="recent-abandoned-loader" style="display:none"></div>
+                <div class="empty-state" id="recent-abandoned-empty" style="display:none">
+                  <p>لا توجد طلبات متروكة حديثة</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
