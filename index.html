@@ -52,127 +52,34 @@ function submitOrder(){showStep(5)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="landing-init.js"></script>
 <script>
-(function(){
-  var SUPABASE_URL = 'https://kqjdxeepusiipewwlzxs.supabase.co';
-  var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxamR4ZWVwdXNpaXBld3dsenhzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI9MTc4Mjc2MDc2OCwiZXhwIjoyMDk4MzM2NzY4fQ.FrFBFi1ggo4PJMtvjubr8K5PSjuaV57_dks8AHERM60';
-  var vid = localStorage.getItem('growup_vid');
-  if (!vid) {
-    vid = 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
-    localStorage.setItem('growup_vid', vid);
-  }
-  var start = Date.now();
-  var visitId = null;
-  var ua = navigator.userAgent;
-  var device = /Mobi|Android/i.test(ua) ? 'mobile' : /Tablet|iPad/i.test(ua) ? 'tablet' : 'desktop';
-  var browser = (ua.match(/(Chrome|Firefox|Safari|Edge|Opera)/) || ['—'])[0];
-  var ref = document.referrer || 'direct';
-  var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  var params = new URLSearchParams(window.location.search);
-  var headers = {
-    'Content-Type': 'application/json',
-    'apikey': SUPABASE_KEY,
-    'Authorization': 'Bearer ' + SUPABASE_KEY
-  };
-  var extra = {
-    screen_resolution: screen.width + 'x' + screen.height,
-    viewport_size: window.innerWidth + 'x' + window.innerHeight,
-    language: navigator.language || navigator.userLanguage || '',
-    timezone: Intl.DateTimeFormat ? Intl.DateTimeFormat().resolvedOptions().timeZone : '',
-    connection_type: conn ? (conn.effectiveType || '') : '',
-    device_memory: navigator.deviceMemory || null,
-    hardware_concurrency: navigator.hardwareConcurrency || null,
-    touch_support: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
-    screen_orientation: screen.orientation ? screen.orientation.type : '',
-    color_depth: screen.colorDepth || null,
-    user_agent: ua,
-    utm_source: params.get('utm_source') || '',
-    utm_medium: params.get('utm_medium') || '',
-    utm_campaign: params.get('utm_campaign') || '',
-    utm_term: params.get('utm_term') || '',
-    utm_content: params.get('utm_content') || '',
-    scroll_depth: 0,
-    page_count: 1,
-    exit_page: '',
-    total_clicks: 0
-  };
-  fetch(SUPABASE_URL + '/rest/v1/page_visits', {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify({
-      visitor_id: vid,
-      referrer: ref,
-      device_type: device,
-      browser: browser,
-      os: navigator.platform,
-      page_url: window.location.href,
-      landing_page: window.location.pathname,
-      duration_seconds: 0,
-      screen_resolution: extra.screen_resolution,
-      viewport_size: extra.viewport_size,
-      language: extra.language,
-      timezone: extra.timezone,
-      connection_type: extra.connection_type,
-      device_memory: extra.device_memory,
-      hardware_concurrency: extra.hardware_concurrency,
-      touch_support: extra.touch_support,
-      screen_orientation: extra.screen_orientation,
-      color_depth: extra.color_depth,
-      user_agent: extra.user_agent,
-      utm_source: extra.utm_source,
-      utm_medium: extra.utm_medium,
-      utm_campaign: extra.utm_campaign,
-      utm_term: extra.utm_term,
-      utm_content: extra.utm_content
-    })
-  })
-  .then(function(r){ return r.json() })
-  .then(function(d){ if (d && d[0]) visitId = d[0].id })
-  .catch(function(){});
-  function updateDuration() {
-    var dur = Math.round((Date.now() - start) / 1000);
-    if (visitId && dur > 0) {
-      fetch(SUPABASE_URL + '/rest/v1/page_visits?id=eq.' + visitId, {
-        method: 'PATCH',
-        headers: headers,
-        body: JSON.stringify({ duration_seconds: dur }),
-        keepalive: true
-      }).catch(function(){});
-    }
-  }
-  window.addEventListener('beforeunload', updateDuration);
-  document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'hidden') updateDuration();
-  });
-  var maxScroll = 0;
-  window.addEventListener('scroll', function() {
-    var h = document.documentElement.scrollHeight - window.innerHeight;
-    if (h > 0) {
-      var pct = Math.round((window.scrollY / h) * 100);
-      if (pct > maxScroll) maxScroll = pct;
-    }
-  }, { passive: true });
-  window.addEventListener('beforeunload', function() {
-    if (visitId && maxScroll > 0) {
-      fetch(SUPABASE_URL + '/rest/v1/page_visits?id=eq.' + visitId, {
-        method: 'PATCH',
-        headers: headers,
-        body: JSON.stringify({ scroll_depth: maxScroll }),
-        keepalive: true
-      }).catch(function(){});
-    }
-  });
-  var clickCount = 0;
-  document.addEventListener('click', function() { clickCount++ }, { passive: true });
-  window.addEventListener('beforeunload', function() {
-    if (visitId && clickCount > 0) {
-      fetch(SUPABASE_URL + '/rest/v1/page_visits?id=eq.' + visitId, {
-        method: 'PATCH',
-        headers: headers,
-        body: JSON.stringify({ total_clicks: clickCount }),
-        keepalive: true
-      }).catch(function(){});
-    }
-  });
-})();
+(function(){try{
+  var U='https://kqjdxeepusiipewwlzxs.supabase.co',K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxamR4ZWVwdXNpaXBld3dsenhzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MDc2OCwiZXhwIjoyMDk4MzM2NzY4fQ.FrFBFi1ggo4PJMtvjubr8K5PSjuaV57_dks8AHERM60';
+  var vid=localStorage.getItem('growup_vid')||('v_'+Date.now()+'_'+Math.random().toString(36).slice(2,9));
+  localStorage.setItem('growup_vid',vid);
+  var s=Date.now(),vid2=null,ua=navigator.userAgent,ref=document.referrer||'direct',d=/Mobi|Android/i.test(ua)?'mobile':/Tablet|iPad/i.test(ua)?'tablet':'desktop';
+  var b=(ua.match(/(Chrome|Firefox|Safari|Edge|Opera)/)||['—'])[0];
+  var c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  function g(n){try{var p=new URLSearchParams(window.location.search);return p.get(n)||''}catch(e){return''}}
+  var h={'Content-Type':'application/json','apikey':K,'Authorization':'Bearer '+K};
+  fetch(U+'/rest/v1/page_visits',{method:'POST',headers:h,body:JSON.stringify({
+    visitor_id:vid,referrer:ref,device_type:d,browser:b,os:navigator.platform,
+    page_url:location.href,landing_page:location.pathname,duration_seconds:0,
+    screen_resolution:(screen.width+'x'+screen.height),viewport_size:(innerWidth+'x'+innerHeight),
+    language:navigator.language||'',timezone:Intl.DateTimeFormat?Intl.DateTimeFormat().resolvedOptions().timeZone:'',
+    connection_type:c?(c.effectiveType||''):'',device_memory:navigator.deviceMemory||null,
+    hardware_concurrency:navigator.hardwareConcurrency||null,
+    touch_support:('ontouchstart'in window)||navigator.maxTouchPoints>0,
+    screen_orientation:screen.orientation?screen.orientation.type:'',
+    color_depth:screen.colorDepth||null,user_agent:ua,
+    utm_source:g('utm_source'),utm_medium:g('utm_medium'),utm_campaign:g('utm_campaign'),utm_term:g('utm_term'),utm_content:g('utm_content')
+  })}).then(function(r){return r.json()}).then(function(d){if(d&&d[0])vid2=d[0].id}).catch(function(){});
+  function upd(){var dur=Math.round((Date.now()-s)/1000);if(vid2&&dur>0)fetch(U+'/rest/v1/page_visits?id=eq.'+vid2,{method:'PATCH',headers:h,body:JSON.stringify({duration_seconds:dur}),keepalive:true}).catch(function(){})}
+  addEventListener('beforeunload',upd);
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')upd()});
+  var ms=0;addEventListener('scroll',function(){var h=document.documentElement.scrollHeight-innerHeight;if(h>0){var p=Math.round(scrollY/h*100);if(p>ms)ms=p}},{passive:true});
+  addEventListener('beforeunload',function(){if(vid2&&ms>0)fetch(U+'/rest/v1/page_visits?id=eq.'+vid2,{method:'PATCH',headers:h,body:JSON.stringify({scroll_depth:ms}),keepalive:true}).catch(function(){})});
+  var cc=0;document.addEventListener('click',function(){cc++},{passive:true});
+  addEventListener('beforeunload',function(){if(vid2&&cc>0)fetch(U+'/rest/v1/page_visits?id=eq.'+vid2,{method:'PATCH',headers:h,body:JSON.stringify({total_clicks:cc}),keepalive:true}).catch(function(){})});
+}catch(e){console.error('growup_track:',e)}})();
 </script>
 </body></html>
